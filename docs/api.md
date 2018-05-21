@@ -1,8 +1,10 @@
-##### Released APIs: [v1.3.0](https://github.com/GoogleChrome/puppeteer/blob/v1.3.0/docs/api.md) | [v1.2.0](https://github.com/GoogleChrome/puppeteer/blob/v1.2.0/docs/api.md) | [v1.1.1](https://github.com/GoogleChrome/puppeteer/blob/v1.1.1/docs/api.md) | [v1.1.0](https://github.com/GoogleChrome/puppeteer/blob/v1.1.0/docs/api.md) | [v1.0.0](https://github.com/GoogleChrome/puppeteer/blob/v1.0.0/docs/api.md) | [v0.13.0](https://github.com/GoogleChrome/puppeteer/blob/v0.13.0/docs/api.md) | [v0.12.0](https://github.com/GoogleChrome/puppeteer/blob/v0.12.0/docs/api.md) | [v0.11.0](https://github.com/GoogleChrome/puppeteer/blob/v0.11.0/docs/api.md) | [v0.10.2](https://github.com/GoogleChrome/puppeteer/blob/v0.10.2/docs/api.md) | [v0.10.1](https://github.com/GoogleChrome/puppeteer/blob/v0.10.1/docs/api.md) | [v0.10.0](https://github.com/GoogleChrome/puppeteer/blob/v0.10.0/docs/api.md) | [v0.9.0](https://github.com/GoogleChrome/puppeteer/blob/v0.9.0/docs/api.md)
+##### Released APIs: [v1.4.0](https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md) | [v1.3.0](https://github.com/GoogleChrome/puppeteer/blob/v1.3.0/docs/api.md) | [v1.2.0](https://github.com/GoogleChrome/puppeteer/blob/v1.2.0/docs/api.md) | [v1.1.1](https://github.com/GoogleChrome/puppeteer/blob/v1.1.1/docs/api.md) | [v1.1.0](https://github.com/GoogleChrome/puppeteer/blob/v1.1.0/docs/api.md) | [v1.0.0](https://github.com/GoogleChrome/puppeteer/blob/v1.0.0/docs/api.md) | [v0.13.0](https://github.com/GoogleChrome/puppeteer/blob/v0.13.0/docs/api.md) | [v0.12.0](https://github.com/GoogleChrome/puppeteer/blob/v0.12.0/docs/api.md) | [v0.11.0](https://github.com/GoogleChrome/puppeteer/blob/v0.11.0/docs/api.md) | [v0.10.2](https://github.com/GoogleChrome/puppeteer/blob/v0.10.2/docs/api.md) | [v0.10.1](https://github.com/GoogleChrome/puppeteer/blob/v0.10.1/docs/api.md) | [v0.10.0](https://github.com/GoogleChrome/puppeteer/blob/v0.10.0/docs/api.md) | [v0.9.0](https://github.com/GoogleChrome/puppeteer/blob/v0.9.0/docs/api.md)
 
-# Puppeteer API v<!-- GEN:version -->1.3.0-post<!-- GEN:stop-->
+# Puppeteer API <!-- GEN:version -->Tip-Of-Tree<!-- GEN:stop-->
 
-> Next Release: **May 8, 2018**
+<!-- GEN:empty-if-release -->
+> Next Release: **June 7, 2018**
+<!-- GEN:stop -->
 
 
 ##### Table of Contents
@@ -29,7 +31,9 @@
   * [event: 'targetchanged'](#event-targetchanged)
   * [event: 'targetcreated'](#event-targetcreated)
   * [event: 'targetdestroyed'](#event-targetdestroyed)
+  * [browser.browserContexts()](#browserbrowsercontexts)
   * [browser.close()](#browserclose)
+  * [browser.createIncognitoBrowserContext()](#browsercreateincognitobrowsercontext)
   * [browser.disconnect()](#browserdisconnect)
   * [browser.newPage()](#browsernewpage)
   * [browser.pages()](#browserpages)
@@ -38,6 +42,15 @@
   * [browser.userAgent()](#browseruseragent)
   * [browser.version()](#browserversion)
   * [browser.wsEndpoint()](#browserwsendpoint)
+- [class: BrowserContext](#class-browsercontext)
+  * [event: 'targetchanged'](#event-targetchanged-1)
+  * [event: 'targetcreated'](#event-targetcreated-1)
+  * [event: 'targetdestroyed'](#event-targetdestroyed-1)
+  * [browserContext.browser()](#browsercontextbrowser)
+  * [browserContext.close()](#browsercontextclose)
+  * [browserContext.isIncognito()](#browsercontextisincognito)
+  * [browserContext.newPage()](#browsercontextnewpage)
+  * [browserContext.targets()](#browsercontexttargets)
 - [class: Page](#class-page)
   * [event: 'close'](#event-close)
   * [event: 'console'](#event-console)
@@ -65,7 +78,7 @@
   * [page.bringToFront()](#pagebringtofront)
   * [page.browser()](#pagebrowser)
   * [page.click(selector[, options])](#pageclickselector-options)
-  * [page.close()](#pageclose)
+  * [page.close(options)](#pagecloseoptions)
   * [page.content()](#pagecontent)
   * [page.cookies(...urls)](#pagecookiesurls)
   * [page.coverage](#pagecoverage)
@@ -185,6 +198,7 @@
 - [class: ElementHandle](#class-elementhandle)
   * [elementHandle.$(selector)](#elementhandleselector)
   * [elementHandle.$$(selector)](#elementhandleselector)
+  * [elementHandle.$eval(selector, pageFunction, ...args)](#elementhandleevalselector-pagefunction-args)
   * [elementHandle.$x(expression)](#elementhandlexexpression)
   * [elementHandle.asElement()](#elementhandleaselement)
   * [elementHandle.boundingBox()](#elementhandleboundingbox)
@@ -237,6 +251,7 @@
   * [securityDetails.validTo()](#securitydetailsvalidto)
 - [class: Target](#class-target)
   * [target.browser()](#targetbrowser)
+  * [target.browserContext()](#targetbrowsercontext)
   * [target.createCDPSession()](#targetcreatecdpsession)
   * [target.page()](#targetpage)
   * [target.type()](#targettype)
@@ -443,27 +458,57 @@ Emitted when Puppeteer gets disconnected from the Chromium instance. This might 
 
 Emitted when the url of a target changes.
 
+> **NOTE** This includes target changes in incognito browser contexts.
+
+
 #### event: 'targetcreated'
 - <[Target]>
 
 Emitted when a target is created, for example when a new page is opened by [`window.open`](https://developer.mozilla.org/en-US/docs/Web/API/Window/open) or [`browser.newPage`](#browsernewpage).
+
+> **NOTE** This includes target creations in incognito browser contexts.
 
 #### event: 'targetdestroyed'
 - <[Target]>
 
 Emitted when a target is destroyed, for example when a page is closed.
 
+> **NOTE** This includes target destructions in incognito browser contexts.
+
+#### browser.browserContexts()
+- returns: <[Array]<[BrowserContext]>>
+
+Returns an array of all open browser contexts. In a newly created browser, this will return
+a single instance of [BrowserContext].
+
 #### browser.close()
 - returns: <[Promise]>
 
 Closes Chromium and all of its pages (if any were opened). The [Browser] object itself is considered to be disposed and cannot be used anymore.
+
+#### browser.createIncognitoBrowserContext()
+- returns: <[Promise]<[BrowserContext]>>
+
+Creates a new incognito browser context. This won't share cookies/cache with other browser contexts.
+
+```js
+const browser = await puppeteer.launch();
+// Create a new incognito browser context.
+const context = await browser.createIncognitoBrowserContext();
+// Create a new page in a pristine context.
+const page = await context.newPage();
+// Do stuff
+await page.goto('https://example.com');
+```
 
 #### browser.disconnect()
 
 Disconnects Puppeteer from the browser, but leaves the Chromium process running. After calling `disconnect`, the [Browser] object is considered disposed and cannot be used anymore.
 
 #### browser.newPage()
-- returns: <[Promise]<[Page]>> Promise which resolves to a new [Page] object.
+- returns: <[Promise]<[Page]>>
+
+Promise which resolves to a new [Page] object. The [Page] is created in a default browser context.
 
 #### browser.pages()
 - returns: <[Promise]<[Array]<[Page]>>> Promise which resolves to an array of all open pages.
@@ -472,7 +517,10 @@ Disconnects Puppeteer from the browser, but leaves the Chromium process running.
 - returns: <?[ChildProcess]> Spawned browser process. Returns `null` if the browser instance was created with [`puppeteer.connect`](#puppeteerconnectoptions) method.
 
 #### browser.targets()
-- returns: <[Array]<[Target]>> An array of all active targets.
+- returns: <[Array]<[Target]>>
+
+An array of all active targets inside the Browser. In case of multiple browser contexts,
+the method will return an array with all the targets in all browser contexts.
 
 #### browser.userAgent()
 - returns: <[Promise]<[string]>> Promise which resolves to the browser's original user agent.
@@ -491,6 +539,76 @@ Browser websocket endpoint which can be used as an argument to
 [puppeteer.connect](#puppeteerconnectoptions). The format is `ws://${host}:${port}/devtools/browser/<id>`
 
 You can find the `webSocketDebuggerUrl` from `http://${host}:${port}/json/version`. Learn more about the [devtools protocol](https://chromedevtools.github.io/devtools-protocol) and the [browser endpoint](https://chromedevtools.github.io/devtools-protocol/#how-do-i-access-the-browser-target).
+
+### class: BrowserContext
+
+* extends: [`EventEmitter`](https://nodejs.org/api/events.html#events_class_eventemitter)
+
+BrowserContexts provide a way to operate multiple independent browser sessions. When a browser is launched, it has
+a single BrowserContext used by default. The method `browser.newPage()` creates a page in the default browser context.
+
+If a page opens another page, e.g. with a `window.open` call, the popup will belong to the parent page's browser
+context.
+
+Puppeteer allows creation of "incognito" browser contexts with `browser.createIncognitoBrowserContext()` method.
+"Incognito" browser contexts don't write any browsing data to disk.
+
+```js
+// Create a new incognito browser context
+const context = await browser.createIncognitoBrowserContext();
+// Create a new page inside context.
+const page = await context.newPage();
+// ... do stuff with page ...
+await page.goto('https://example.com');
+// Dispose context once it's no longer needed.
+await context.close();
+```
+
+#### event: 'targetchanged'
+- <[Target]>
+
+Emitted when the url of a target inside the browser context changes.
+
+#### event: 'targetcreated'
+- <[Target]>
+
+Emitted when a new target is created inside the browser context, for example when a new page is opened by [`window.open`](https://developer.mozilla.org/en-US/docs/Web/API/Window/open) or [`browserContext.newPage`](#browsercontextnewpage).
+
+#### event: 'targetdestroyed'
+- <[Target]>
+
+Emitted when a target inside the browser context is destroyed, for example when a page is closed.
+
+#### browserContext.browser()
+- returns: <[Browser]>
+
+The browser this browser context belongs to.
+
+#### browserContext.close()
+- returns: <[Promise]>
+
+Closes the browser context. All the targets that belong to the browser context
+will be closed.
+
+> **NOTE** only incognito browser contexts can be closed.
+
+#### browserContext.isIncognito()
+- returns: <[boolean]>
+
+Returns whether BrowserContext is incognito. 
+The default browser context is the only non-incognito browser context.
+
+> **NOTE** the default browser context cannot be closed.
+
+#### browserContext.newPage()
+- returns: <[Promise]<[Page]>>
+
+Creates a new page in the browser context.
+
+#### browserContext.targets()
+- returns: <[Array]<[Target]>>
+
+An array of all active targets inside the browser context.
 
 ### class: Page
 
@@ -743,8 +861,17 @@ const [response] = await Promise.all([
 
 Shortcut for [page.mainFrame().click(selector[, options])](#frameclickselector-options).
 
-#### page.close()
+#### page.close(options)
+- `options` <[Object]>
+  - `runBeforeUnload` <[boolean]> Defaults to `false`. Whether to run the
+    [before unload](https://developer.mozilla.org/en-US/docs/Web/Events/beforeunload)
+    page handlers.
 - returns: <[Promise]>
+
+By default, `page.close()` **does not** run beforeunload handlers.
+
+> **NOTE** if `runBeforeUnload` is passed as true, a `beforeunload` dialog might be summoned
+> and should be handled manually via page's ['dialog'](#event-dialog) event.
 
 #### page.content()
 - returns: <[Promise]<[String]>>
@@ -1399,6 +1526,17 @@ Shortcut for [page.mainFrame().waitForFunction(pageFunction[, options[, ...args]
     - `networkidle0` - consider navigation to be finished when there are no more than 0 network connections for at least `500` ms.
     - `networkidle2` - consider navigation to be finished when there are no more than 2 network connections for at least `500` ms.
 - returns: <[Promise]<[Response]>> Promise which resolves to the main resource response. In case of multiple redirects, the navigation will resolve with the response of the last redirect.
+
+This resolves when the page navigates to a new URL or reloads. It is useful for when you run code
+which will indirectly cause the page to navigate. Consider this example:
+
+```js
+const navigationPromise = page.waitForNavigation();
+await page.click('a.my-link'); // Clicking the link will indirectly cause a navigation
+await navigationPromise; // The navigationPromise resolves after navigation has finished
+```
+
+**NOTE** Usage of the [History API](https://developer.mozilla.org/en-US/docs/Web/API/History_API) to change the URL is considered a navigation.
 
 #### page.waitForSelector(selector[, options])
 - `selector` <[string]> A [selector] of an element to wait for
@@ -2206,6 +2344,23 @@ The method runs `element.querySelector` within the page. If no element matches t
 
 The method runs `element.querySelectorAll` within the page. If no elements match the selector, the return value resolve to `[]`.
 
+#### elementHandle.$eval(selector, pageFunction, ...args)
+- `selector` <[string]> A [selector] to query page for
+- `pageFunction` <[function]> Function to be evaluated in browser context
+- `...args` <...[Serializable]|[JSHandle]> Arguments to pass to `pageFunction`
+- returns: <[Promise]<[Serializable]>> Promise which resolves to the return value of `pageFunction`
+
+This method runs `document.querySelector` within the element and passes it as the first argument to `pageFunction`. If there's no element matching `selector`, the method throws an error.
+
+If `pageFunction` returns a [Promise], then `frame.$eval` would wait for the promise to resolve and return its value.
+
+Examples:
+```js
+const tweetHandle = await page.$('.tweet');
+expect(await tweetHandle.$eval('.like', node => node.innerText)).toBe('100');
+expect(await tweetHandle.$eval('.retweets', node => node.innerText)).toBe('10');
+```
+
 #### elementHandle.$x(expression)
 - `expression` <[string]> Expression to [evaluate](https://developer.mozilla.org/en-US/docs/Web/API/Document/evaluate).
 - returns: <[Promise]<?[ElementHandle]>> Promise which resolves to ElementHandle pointing to the frame element.
@@ -2567,6 +2722,12 @@ Contains the URL of the response.
 
 Get the browser the target belongs to.
 
+#### target.browserContext()
+
+- returns: <[BrowserContext]>
+
+The browser context the target belongs to.
+
 #### target.createCDPSession()
 - returns: <[Promise]<[CDPSession]>>
 
@@ -2580,7 +2741,7 @@ If the target is not of type `"page"`, returns `null`.
 #### target.type()
 - returns: <[string]>
 
-Identifies what kind of target this is. Can be `"page"`, `"service_worker"`, `"browser"` or `"other"`.
+Identifies what kind of target this is. Can be `"page"`, [`"background_page"`](https://developer.chrome.com/extensions/background_pages), `"service_worker"`, `"browser"` or `"other"`.
 
 #### target.url()
 - returns: <[string]>
@@ -2694,6 +2855,7 @@ reported.
 [stream.Readable]: https://nodejs.org/api/stream.html#stream_class_stream_readable "stream.Readable"
 [CDPSession]: #class-cdpsession  "CDPSession"
 [BrowserFetcher]: #class-browserfetcher  "BrowserFetcher"
+[BrowserContext]: #class-browsercontext  "BrowserContext"
 [Error]: https://nodejs.org/api/errors.html#errors_class_error "Error"
 [Frame]: #class-frame "Frame"
 [ConsoleMessage]: #class-consolemessage "ConsoleMessage"
