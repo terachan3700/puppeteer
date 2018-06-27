@@ -1,16 +1,15 @@
-##### Released APIs: [v1.4.0](https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md) | [v1.3.0](https://github.com/GoogleChrome/puppeteer/blob/v1.3.0/docs/api.md) | [v1.2.0](https://github.com/GoogleChrome/puppeteer/blob/v1.2.0/docs/api.md) | [v1.1.1](https://github.com/GoogleChrome/puppeteer/blob/v1.1.1/docs/api.md) | [v1.1.0](https://github.com/GoogleChrome/puppeteer/blob/v1.1.0/docs/api.md) | [v1.0.0](https://github.com/GoogleChrome/puppeteer/blob/v1.0.0/docs/api.md) | [v0.13.0](https://github.com/GoogleChrome/puppeteer/blob/v0.13.0/docs/api.md) | [v0.12.0](https://github.com/GoogleChrome/puppeteer/blob/v0.12.0/docs/api.md) | [v0.11.0](https://github.com/GoogleChrome/puppeteer/blob/v0.11.0/docs/api.md) | [v0.10.2](https://github.com/GoogleChrome/puppeteer/blob/v0.10.2/docs/api.md) | [v0.10.1](https://github.com/GoogleChrome/puppeteer/blob/v0.10.1/docs/api.md) | [v0.10.0](https://github.com/GoogleChrome/puppeteer/blob/v0.10.0/docs/api.md) | [v0.9.0](https://github.com/GoogleChrome/puppeteer/blob/v0.9.0/docs/api.md)
+##### Released APIs: [v1.5.0](https://github.com/GoogleChrome/puppeteer/blob/v1.5.0/docs/api.md) | [v1.4.0](https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md) | [v1.3.0](https://github.com/GoogleChrome/puppeteer/blob/v1.3.0/docs/api.md) | [v1.2.0](https://github.com/GoogleChrome/puppeteer/blob/v1.2.0/docs/api.md) | [v1.1.1](https://github.com/GoogleChrome/puppeteer/blob/v1.1.1/docs/api.md) | [v1.1.0](https://github.com/GoogleChrome/puppeteer/blob/v1.1.0/docs/api.md) | [v1.0.0](https://github.com/GoogleChrome/puppeteer/blob/v1.0.0/docs/api.md) | [v0.13.0](https://github.com/GoogleChrome/puppeteer/blob/v0.13.0/docs/api.md) | [v0.12.0](https://github.com/GoogleChrome/puppeteer/blob/v0.12.0/docs/api.md) | [v0.11.0](https://github.com/GoogleChrome/puppeteer/blob/v0.11.0/docs/api.md) | [v0.10.2](https://github.com/GoogleChrome/puppeteer/blob/v0.10.2/docs/api.md) | [v0.10.1](https://github.com/GoogleChrome/puppeteer/blob/v0.10.1/docs/api.md) | [v0.10.0](https://github.com/GoogleChrome/puppeteer/blob/v0.10.0/docs/api.md) | [v0.9.0](https://github.com/GoogleChrome/puppeteer/blob/v0.9.0/docs/api.md)
 
 # Puppeteer API <!-- GEN:version -->Tip-Of-Tree<!-- GEN:stop-->
 
 <!-- GEN:empty-if-release -->
-> Next Release: **June 7, 2018**
+> Next Release: **July 12, 2018**
 <!-- GEN:stop -->
 
 
 ##### Table of Contents
 
-<!-- toc -->
-
+<!-- GEN:toc -->
 - [Overview](#overview)
 - [Environment Variables](#environment-variables)
 - [class: Puppeteer](#class-puppeteer)
@@ -67,10 +66,12 @@
   * [event: 'requestfailed'](#event-requestfailed)
   * [event: 'requestfinished'](#event-requestfinished)
   * [event: 'response'](#event-response)
+  * [event: 'workercreated'](#event-workercreated)
+  * [event: 'workerdestroyed'](#event-workerdestroyed)
   * [page.$(selector)](#pageselector)
-  * [page.$$(selector)](#pageselector)
+  * [page.$$(selector)](#pageselector-1)
   * [page.$$eval(selector, pageFunction[, ...args])](#pageevalselector-pagefunction-args)
-  * [page.$eval(selector, pageFunction[, ...args])](#pageevalselector-pagefunction-args)
+  * [page.$eval(selector, pageFunction[, ...args])](#pageevalselector-pagefunction-args-1)
   * [page.$x(expression)](#pagexexpression)
   * [page.addScriptTag(options)](#pageaddscripttagoptions)
   * [page.addStyleTag(options)](#pageaddstyletagoptions)
@@ -95,6 +96,7 @@
   * [page.goForward(options)](#pagegoforwardoptions)
   * [page.goto(url, options)](#pagegotourl-options)
   * [page.hover(selector)](#pagehoverselector)
+  * [page.isClosed()](#pageisclosed)
   * [page.keyboard](#pagekeyboard)
   * [page.mainFrame()](#pagemainframe)
   * [page.metrics()](#pagemetrics)
@@ -128,6 +130,12 @@
   * [page.waitForNavigation(options)](#pagewaitfornavigationoptions)
   * [page.waitForSelector(selector[, options])](#pagewaitforselectorselector-options)
   * [page.waitForXPath(xpath[, options])](#pagewaitforxpathxpath-options)
+  * [page.workers()](#pageworkers)
+- [class: Worker](#class-worker)
+  * [worker.evaluate(pageFunction, ...args)](#workerevaluatepagefunction-args)
+  * [worker.evaluateHandle(pageFunction, ...args)](#workerevaluatehandlepagefunction-args)
+  * [worker.executionContext()](#workerexecutioncontext)
+  * [worker.url()](#workerurl)
 - [class: Keyboard](#class-keyboard)
   * [keyboard.down(key[, options])](#keyboarddownkey-options)
   * [keyboard.press(key[, options])](#keyboardpresskey-options)
@@ -156,9 +164,9 @@
   * [consoleMessage.type()](#consolemessagetype)
 - [class: Frame](#class-frame)
   * [frame.$(selector)](#frameselector)
-  * [frame.$$(selector)](#frameselector)
+  * [frame.$$(selector)](#frameselector-1)
   * [frame.$$eval(selector, pageFunction[, ...args])](#frameevalselector-pagefunction-args)
-  * [frame.$eval(selector, pageFunction[, ...args])](#frameevalselector-pagefunction-args)
+  * [frame.$eval(selector, pageFunction[, ...args])](#frameevalselector-pagefunction-args-1)
   * [frame.$x(expression)](#framexexpression)
   * [frame.addScriptTag(options)](#frameaddscripttagoptions)
   * [frame.addStyleTag(options)](#frameaddstyletagoptions)
@@ -197,8 +205,9 @@
   * [jsHandle.jsonValue()](#jshandlejsonvalue)
 - [class: ElementHandle](#class-elementhandle)
   * [elementHandle.$(selector)](#elementhandleselector)
-  * [elementHandle.$$(selector)](#elementhandleselector)
-  * [elementHandle.$eval(selector, pageFunction, ...args)](#elementhandleevalselector-pagefunction-args)
+  * [elementHandle.$$(selector)](#elementhandleselector-1)
+  * [elementHandle.$$eval(selector, pageFunction, ...args)](#elementhandleevalselector-pagefunction-args)
+  * [elementHandle.$eval(selector, pageFunction, ...args)](#elementhandleevalselector-pagefunction-args-1)
   * [elementHandle.$x(expression)](#elementhandlexexpression)
   * [elementHandle.asElement()](#elementhandleaselement)
   * [elementHandle.boundingBox()](#elementhandleboundingbox)
@@ -224,6 +233,7 @@
   * [request.failure()](#requestfailure)
   * [request.frame()](#requestframe)
   * [request.headers()](#requestheaders)
+  * [request.isNavigationRequest()](#requestisnavigationrequest)
   * [request.method()](#requestmethod)
   * [request.postData()](#requestpostdata)
   * [request.redirectChain()](#requestredirectchain)
@@ -253,6 +263,7 @@
   * [target.browser()](#targetbrowser)
   * [target.browserContext()](#targetbrowsercontext)
   * [target.createCDPSession()](#targetcreatecdpsession)
+  * [target.opener()](#targetopener)
   * [target.page()](#targetpage)
   * [target.type()](#targettype)
   * [target.url()](#targeturl)
@@ -264,21 +275,24 @@
   * [coverage.startJSCoverage(options)](#coveragestartjscoverageoptions)
   * [coverage.stopCSSCoverage()](#coveragestopcsscoverage)
   * [coverage.stopJSCoverage()](#coveragestopjscoverage)
-
-<!-- tocstop -->
+<!-- GEN:stop -->
 
 ### Overview
 
 Puppeteer is a Node library which provides a high-level API to control Chromium or Chrome over the DevTools Protocol.
 
-The Puppeteer API is hierarchical and mirrors the browser structure. On the following diagram, faded entities are not currently represented in Puppeteer.
+The Puppeteer API is hierarchical and mirrors the browser structure.
 
-![puppeteer overview](https://user-images.githubusercontent.com/746130/38952006-1c3c9c16-42ff-11e8-93af-e498076f28b4.png)
+> **NOTE** On the following diagram, faded entities are not currently represented in Puppeteer.
+
+![puppeteer overview](https://user-images.githubusercontent.com/746130/40333229-5df5480c-5d0c-11e8-83cb-c3e371de7374.png)
 
 - [`Puppeteer`](#class-puppeteer) communicates with the browser using [DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/).
-- [`Browser`](#class-browser) instance can own multiple pages.
+- [`Browser`](#class-browser) instance can own multiple browser contexts.
+- [`BrowserContext`](#class-browsercontext) instance defines a browsing session and can own multiple pages.
 - [`Page`](#class-page) has at least one frame: main frame. There might be other frames created by [iframe](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe) or [frame](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/frame) tags.
 - [`Frame`](#class-frame) has at least one execution context - the default execution context - where the frame's JavaScript is executed. A Frame might have additional execution contexts that are associated with [extensions](https://developer.chrome.com/extensions).
+- [`Worker`](#class-worker) has a single execution context and and facilitates interacting with [WebWorkers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API).
 
 (Diagram source: [link](https://docs.google.com/drawings/d/1Q_AM6KYs9kbyLZF-Lpp5mtpAWth73Cq8IKCsWYgi8MM/edit?usp=sharing))
 
@@ -511,7 +525,7 @@ Disconnects Puppeteer from the browser, but leaves the Chromium process running.
 Promise which resolves to a new [Page] object. The [Page] is created in a default browser context.
 
 #### browser.pages()
-- returns: <[Promise]<[Array]<[Page]>>> Promise which resolves to an array of all open pages.
+- returns: <[Promise]<[Array]<[Page]>>> Promise which resolves to an array of all open pages. Non visible pages, such as `"background_page"`, will not be listed here. You can find them using [target.page()](#targetpage).
 
 #### browser.process()
 - returns: <?[ChildProcess]> Spawned browser process. Returns `null` if the browser instance was created with [`puppeteer.connect`](#puppeteerconnectoptions) method.
@@ -595,7 +609,7 @@ will be closed.
 #### browserContext.isIncognito()
 - returns: <[boolean]>
 
-Returns whether BrowserContext is incognito. 
+Returns whether BrowserContext is incognito.
 The default browser context is the only non-incognito browser context.
 
 > **NOTE** the default browser context cannot be closed.
@@ -736,6 +750,16 @@ Emitted when a request finishes successfully.
 
 Emitted when a [response] is received.
 
+#### event: 'workercreated'
+- <[Worker]>
+
+Emitted when a dedicated [WebWorker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API) is spawned by the page.
+
+#### event: 'workerdestroyed'
+- <[Worker]>
+
+Emitted when a dedicated [WebWorker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API) is terminated.
+
 #### page.$(selector)
 - `selector` <[string]> A [selector] to query page for
 - returns: <[Promise]<?[ElementHandle]>>
@@ -758,7 +782,7 @@ Shortcut for [page.mainFrame().$$(selector)](#frameselector-1).
 - `...args` <...[Serializable]|[JSHandle]> Arguments to pass to `pageFunction`
 - returns: <[Promise]<[Serializable]>> Promise which resolves to the return value of `pageFunction`
 
-This method runs `document.querySelectorAll` within the page and passes it as the first argument to `pageFunction`.
+This method runs `Array.from(document.querySelectorAll(selector))` within the page and passes it as the first argument to `pageFunction`.
 
 If `pageFunction` returns a [Promise], then `page.$$eval` would wait for the promise to resolve and return its value.
 
@@ -1126,7 +1150,7 @@ Navigate to the previous page in history.
     - `networkidle0` - consider navigation to be finished when there are no more than 0 network connections for at least `500` ms.
     - `networkidle2` - consider navigation to be finished when there are no more than 2 network connections for at least `500` ms.
 - returns: <[Promise]<?[Response]>> Promise which resolves to the main resource response. In case of multiple redirects, the navigation will resolve with the response of the last redirect. If
-can not go back, resolves to `null`.
+can not go forward, resolves to `null`.
 
 Navigate to the next page in history.
 
@@ -1147,7 +1171,7 @@ The `page.goto` will throw an error if:
 - the `timeout` is exceeded during navigation.
 - the main resource failed to load.
 
-> **NOTE** `page.goto` either throw or return a main resource response. The only exception is navigation to `about:blank`, which would succeed and return `null`.
+> **NOTE** `page.goto` either throw or return a main resource response. The only exceptions are navigation to `about:blank` or navigation to the same URL with a different hash, which would succeed and return `null`.
 
 > **NOTE** Headless mode doesn't support navigating to a PDF document. See the [upstream issue](https://bugs.chromium.org/p/chromium/issues/detail?id=761295).
 
@@ -1159,6 +1183,12 @@ This method fetches an element with `selector`, scrolls it into view if needed, 
 If there's no element matching `selector`, the method throws an error.
 
 Shortcut for [page.mainFrame().hover(selector)](#framehoverselector).
+
+#### page.isClosed()
+
+- returns: boolean
+
+Indicates that the page has been closed.
 
 #### page.keyboard
 
@@ -1299,7 +1329,8 @@ Shortcut for [page.mainFrame().executionContext().queryObjects(prototypeHandle)]
     - `width` <[number]> width of clipping area
     - `height` <[number]> height of clipping area
   - `omitBackground` <[boolean]> Hides default white background and allows capturing screenshots with transparency. Defaults to `false`.
-- returns: <[Promise]<[Buffer]>> Promise which resolves to buffer with captured screenshot
+  - `encoding` <[string]> The encoding of the image, can be either `base64` or `binary`. Defaults to `binary`.
+- returns: <[Promise]<[Buffer|String]>> Promise which resolves to buffer or a base64 string (depending on the value of `encoding`) with captured screenshot.
 
 > **NOTE** Screenshots take at least 1/6 second on OS X. See https://crbug.com/741689 for discussion.
 
@@ -1383,7 +1414,7 @@ The extra HTTP headers will be sent with every request the page initiates.
 - returns: <[Promise]>
 
 Activating request interception enables `request.abort`, `request.continue` and
-`request.respond` methods.
+`request.respond` methods.  This provides the capability to modify network requests that are made by a page.
 
 An example of a naïve request interceptor that aborts all image requests:
 ```js
@@ -1525,7 +1556,7 @@ Shortcut for [page.mainFrame().waitForFunction(pageFunction[, options[, ...args]
     - `domcontentloaded` - consider navigation to be finished when the `DOMContentLoaded` event is fired.
     - `networkidle0` - consider navigation to be finished when there are no more than 0 network connections for at least `500` ms.
     - `networkidle2` - consider navigation to be finished when there are no more than 2 network connections for at least `500` ms.
-- returns: <[Promise]<[Response]>> Promise which resolves to the main resource response. In case of multiple redirects, the navigation will resolve with the response of the last redirect.
+- returns: <[Promise]<[?Response]>> Promise which resolves to the main resource response. In case of multiple redirects, the navigation will resolve with the response of the last redirect. In case of navigation to a different anchor or navigation due to History API usage, the navigation will resolve with `null`.
 
 This resolves when the page navigates to a new URL or reloads. It is useful for when you run code
 which will indirectly cause the page to navigate. Consider this example:
@@ -1596,6 +1627,54 @@ puppeteer.launch().then(async browser => {
 ```
 Shortcut for [page.mainFrame().waitForXPath(xpath[, options])](#framewaitforxpathxpath-options).
 
+#### page.workers()
+- returns: <[Array]<[Worker]>>
+This method returns all of the dedicated [WebWorkers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API) associated with the page.
+
+> **NOTE** This does not contain ServiceWorkers
+
+### class: Worker
+
+The Worker class represents a [WebWorker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API).
+The events `workercreated` and `workerdestroyed` are emitted on the page object to signal the worker lifecycle.
+
+```js
+page.on('workercreated', worker => console.log('Worker created: ' + worker.url()));
+page.on('workerdestroyed', worker => console.log('Worker destroyed: ' + worker.url()));
+
+console.log('Current workers:');
+for (const worker of page.workers())
+  console.log('  ' + worker.url());
+```
+
+#### worker.evaluate(pageFunction, ...args)
+- `pageFunction` <[function]|[string]> Function to be evaluated in the worker context
+- `...args` <...[Serializable]|[JSHandle]> Arguments to pass to `pageFunction`
+- returns: <[Promise]<[Serializable]>> Promise which resolves to the return value of `pageFunction`
+
+If the function passed to the `worker.evaluate` returns a [Promise], then `worker.evaluate` would wait for the promise to resolve and return its value.
+
+If the function passed to the `worker.evaluate` returns a non-[Serializable] value, then `worker.evaluate` resolves to `undefined`.
+
+Shortcut for [(await worker.executionContext()).evaluate(pageFunction, ...args)](#executioncontextevaluatepagefunction-args).
+
+#### worker.evaluateHandle(pageFunction, ...args)
+- `pageFunction` <[function]|[string]> Function to be evaluated in the page context
+- `...args` <...[Serializable]|[JSHandle]> Arguments to pass to `pageFunction`
+- returns: <[Promise]<[JSHandle]>> Promise which resolves to the return value of `pageFunction` as in-page object (JSHandle)
+
+The only difference between `worker.evaluate` and `worker.evaluateHandle` is that `worker.evaluateHandle` returns in-page object (JSHandle).
+
+If the function passed to the `worker.evaluateHandle` returns a [Promise], then `worker.evaluateHandle` would wait for the promise to resolve and return its value.
+
+Shortcut for [(await worker.executionContext()).evaluateHandle(pageFunction, ...args)](#executioncontextevaluatehandlepagefunction-args).
+
+#### worker.executionContext()
+- returns: <[Promise]<[ExecutionContext]>>
+
+#### worker.url()
+- returns: <[string]>
+
 ### class: Keyboard
 
 Keyboard provides an api for managing a virtual keyboard. The high level api is [`keyboard.type`](#keyboardtypetext-options), which takes raw characters and generates proper keydown, keypress/input, and keyup events on your page.
@@ -1650,7 +1729,7 @@ After the key is pressed once, subsequent calls to [`keyboard.down`](#keyboarddo
 
 If `key` is a single character and no modifier keys besides `Shift` are being held down, a `keypress`/`input` event will also generated. The `text` option can be specified to force an input event to be generated.
 
-> **NOTE** Modifier keys DO effect `elementHandle.press`. Holding down `Shift` will type the text in upper case.
+> **NOTE** Modifier keys DO effect `keyboard.press`. Holding down `Shift` will type the text in upper case.
 
 Shortcut for [`keyboard.down`](#keyboarddownkey-options) and [`keyboard.up`](#keyboardupkey).
 
@@ -1854,7 +1933,7 @@ The method runs `document.querySelectorAll` within the frame. If no elements mat
 - `...args` <...[Serializable]|[JSHandle]> Arguments to pass to `pageFunction`
 - returns: <[Promise]<[Serializable]>> Promise which resolves to the return value of `pageFunction`
 
-This method runs `document.querySelectorAll` within the frame and passes it as the first argument to `pageFunction`.
+This method runs `Array.from(document.querySelectorAll(selector))` within the frame and passes it as the first argument to `pageFunction`.
 
 If `pageFunction` returns a [Promise], then `frame.$$eval` would wait for the promise to resolve and return its value.
 
@@ -2344,6 +2423,28 @@ The method runs `element.querySelector` within the page. If no element matches t
 
 The method runs `element.querySelectorAll` within the page. If no elements match the selector, the return value resolve to `[]`.
 
+#### elementHandle.$$eval(selector, pageFunction, ...args)
+- `selector` <[string]> A [selector] to query page for
+- `pageFunction` <[function]> Function to be evaluated in browser context
+- `...args` <...[Serializable]|[JSHandle]> Arguments to pass to `pageFunction`
+- returns: <[Promise]<[Serializable]>> Promise which resolves to the return value of `pageFunction`
+
+This method runs `document.querySelectorAll` within the element and passes it as the first argument to `pageFunction`. If there's no element matching `selector`, the method throws an error.
+
+If `pageFunction` returns a [Promise], then `frame.$$eval` would wait for the promise to resolve and return its value.
+
+Examples:
+```html
+<div class="feed">
+  <div class="tweet">Hello!</div>
+  <div class="tweet">Hi!</div>
+</div>
+```
+```js
+const feedHandle = await page.$('.feed');
+expect(await feedHandle.$$eval('.tweet', nodes => nodes.map(n => n.innerText)).toEqual(['Hello!', 'Hi!']);
+```
+
 #### elementHandle.$eval(selector, pageFunction, ...args)
 - `selector` <[string]> A [selector] to query page for
 - `pageFunction` <[function]> Function to be evaluated in browser context
@@ -2363,9 +2464,9 @@ expect(await tweetHandle.$eval('.retweets', node => node.innerText)).toBe('10');
 
 #### elementHandle.$x(expression)
 - `expression` <[string]> Expression to [evaluate](https://developer.mozilla.org/en-US/docs/Web/API/Document/evaluate).
-- returns: <[Promise]<?[ElementHandle]>> Promise which resolves to ElementHandle pointing to the frame element.
+- returns: <[Promise]<[Array]<[ElementHandle]>>>
 
-The method evaluates the XPath expression relative to the elementHandle. If there's no such element, the method will resolve to `null`.
+The method evaluates the XPath expression relative to the elementHandle. If there are no such elements, the method will resolve to an empty array.
 
 #### elementHandle.asElement()
 - returns: <[elementhandle]>
@@ -2511,7 +2612,7 @@ This method expects `elementHandle` to point to an [input element](https://devel
 
 ### class: Request
 
-Whenever the page sends a request, the following events are emitted by puppeteer's page:
+Whenever the page sends a request, such as for a network resource, the following events are emitted by puppeteer's page:
 - ['request'](#event-request) emitted when the request is issued by the page.
 - ['response'](#event-response) emitted when/if the response is received for the request.
 - ['requestfinished'](#event-requestfinished) emitted when the response body is downloaded and the request is complete.
@@ -2527,6 +2628,8 @@ If request gets a 'redirect' response, the request is successfully finished with
   - `accessdenied` - Permission to access a resource, other than the network, was denied
   - `addressunreachable` - The IP address is unreachable. This usually means
     that there is no route to the specified host or network.
+  - `blockedbyclient` - The client chose to block the request.
+  - `blockedbyresponse` - The request failed because the response was delivered along with requirements which are not met ('X-Frame-Options' and 'Content-Security-Policy' ancestor checks, for instance).
   - `connectionaborted` - A connection timed out as a result of not receiving an ACK for data sent.
   - `connectionclosed` - A connection was closed (corresponding to a TCP FIN).
   - `connectionfailed` - A connection attempt failed.
@@ -2572,6 +2675,11 @@ page.on('requestfailed', request => {
 
 #### request.headers()
 - returns: <[Object]> An object with HTTP headers associated with the request. All header names are lower-case.
+
+#### request.isNavigationRequest()
+- returns: <[boolean]>
+
+Whether this request is driving frame's navigation.
 
 #### request.method()
 - returns: <[string]> Request's method (GET, POST, etc.)
@@ -2733,10 +2841,15 @@ The browser context the target belongs to.
 
 Creates a Chrome Devtools Protocol session attached to the target.
 
+#### target.opener()
+- returns: <?[Target]>
+
+Get the target that opened this target. Top-level targets return `null`.
+
 #### target.page()
 - returns: <[Promise]<?[Page]>>
 
-If the target is not of type `"page"`, returns `null`.
+If the target is not of type `"page"` or `"background_page"`, returns `null`.
 
 #### target.type()
 - returns: <[string]>
@@ -2759,7 +2872,7 @@ Documentation on DevTools Protocol can be found here: [DevTools Protocol Viewer]
 ```js
 const client = await page.target().createCDPSession();
 await client.send('Animation.enable');
-await client.on('Animation.animationCreated', () => console.log('Animation created!'));
+client.on('Animation.animationCreated', () => console.log('Animation created!'));
 const response = await client.send('Animation.getPlaybackRate');
 console.log('playback rate is ' + response.playbackRate);
 await client.send('Animation.setPlaybackRate', {
@@ -2884,3 +2997,4 @@ reported.
 [xpath]: https://developer.mozilla.org/en-US/docs/Web/XPath "xpath"
 [UnixTime]: https://en.wikipedia.org/wiki/Unix_time "Unix Time"
 [SecurityDetails]: #class-securitydetails "SecurityDetails"
+[Worker]: #class-worker "Worker"

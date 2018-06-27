@@ -1,11 +1,14 @@
 {
   "name": "puppeteer",
-  "version": "1.4.0-post",
+  "version": "1.5.0-post",
   "description": "A high-level API to control headless Chrome over the DevTools Protocol",
   "main": "index.js",
   "repository": "github:GoogleChrome/puppeteer",
   "engines": {
     "node": ">=6.4.0"
+  },
+  "puppeteer": {
+    "chromium_revision": "568432"
   },
   "scripts": {
     "unit": "node test/test.js",
@@ -19,7 +22,7 @@
     "test-node6-transformer": "node utils/node6-transform/test/test.js",
     "build": "node utils/node6-transform/index.js",
     "unit-node6": "node node6/test/test.js",
-    "tsc": "node utils/protocol-types-generator && tsc -p .",
+    "tsc": "tsc -p .",
     "prepublishOnly": "npm run build",
     "apply-next-version": "node utils/apply_next_version.js"
   },
@@ -35,9 +38,6 @@
     "rimraf": "^2.6.1",
     "ws": "^5.1.1"
   },
-  "puppeteer": {
-    "chromium_revision": "557152"
-  },
   "devDependencies": {
     "@types/debug": "0.0.30",
     "@types/extract-zip": "^1.6.2",
@@ -49,10 +49,8 @@
     "cross-env": "^5.0.5",
     "eslint": "^4.19.1",
     "esprima": "^4.0.0",
-    "markdown-toc": "^1.2.0",
     "minimist": "^1.2.0",
     "ncp": "^2.0.0",
-    "pdfjs-dist": "^1.8.595",
     "pixelmatch": "^4.0.2",
     "pngjs": "^3.3.3",
     "text-diff": "^1.0.1",

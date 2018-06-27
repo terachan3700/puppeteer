@@ -6,7 +6,7 @@
 
 <img src="https://user-images.githubusercontent.com/10379601/29446482-04f7036a-841f-11e7-9872-91d1fc2ea683.png" height="200" align="right">
 
-###### <!-- gen:last-released-api -->[API](https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md)<!-- gen:stop --> | [FAQ](#faq) | [Contributing](https://github.com/GoogleChrome/puppeteer/blob/master/CONTRIBUTING.md)
+###### <!-- gen:last-released-api -->[API](https://github.com/GoogleChrome/puppeteer/blob/v1.5.0/docs/api.md)<!-- gen:stop --> | [FAQ](#faq) | [Contributing](https://github.com/GoogleChrome/puppeteer/blob/master/CONTRIBUTING.md)
 
 > Puppeteer is a Node library which provides a high-level API to control [headless](htt`ps://developers.google.com/web/updates/2017/04/headless-chrome) Chrome or Chromium over the [DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/). It can also be configured to use full (non-headless) Chrome or Chromium.
 
@@ -296,7 +296,7 @@ Please note that prerelease may be unstable and contain bugs.
 There are many ways to get help on Puppeteer:
 - [bugtracker](https://github.com/GoogleChrome/puppeteer/issues)
 - [stackoverflow](https://stackoverflow.com/questions/tagged/puppeteer)
-- [slack channel](https://join.slack.com/t/puppeteer/shared_invite/enQtMzAyOTU1MzQyOTQ1LTUzOTAxNjE5YWI0YzNmYmRkN2I4MDg2MzI4OGE3YWNhZDBlYWMyNTlmOTJlN2RhYzlmODI4ZDQxZGEyMGIwNDY)
+- [slack channel](https://join.slack.com/t/puppeteer/shared_invite/enQtMzU4MjIyMDA5NTM4LTM1OTdkNDhlM2Y4ZGUzZDdjYjM5ZWZlZGFiZjc4MTkyYTVlYzIzYjU5NDIyNzgyMmFiNDFjN2UzNWU0N2ZhZDc)
 
 Make sure to search these channels before posting your question.
 
