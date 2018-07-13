@@ -50,7 +50,7 @@ module.exports.addTests = function({testRunner, expect}) {
       const box = await elementHandle.boundingBox();
       expect(box).toEqual({ x: 8, y: 8, width: 100, height: 200 });
     });
-    xit('should work with SVG nodes', async({page, server}) => {
+    it('should work with SVG nodes', async({page, server}) => {
       await page.setContent(`
         <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500">
           <rect id="theRect" x="30" y="50" width="200" height="300"></rect>
@@ -195,6 +195,18 @@ module.exports.addTests = function({testRunner, expect}) {
       const button = await page.$('#button-6');
       await button.hover();
       expect(await page.evaluate(() => document.querySelector('button:hover').id)).toBe('button-6');
+    });
+  });
+
+  describe('ElementHandle.isIntersectingViewport', function() {
+    it('should work', async({page, server}) => {
+      await page.goto(server.PREFIX + '/offscreenbuttons.html');
+      for (let i = 0; i < 11; ++i) {
+        const button = await page.$('#btn' + i);
+        // All but last button are visible.
+        const visible = i < 10;
+        expect(await button.isIntersectingViewport()).toBe(visible);
+      }
     });
   });
 

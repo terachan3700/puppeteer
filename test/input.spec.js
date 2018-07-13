@@ -33,7 +33,7 @@ module.exports.addTests = function({testRunner, expect, DeviceDescriptors}) {
       await page.goto(server.PREFIX + '/offscreenbuttons.html');
       const messages = [];
       page.on('console', msg => messages.push(msg.text()));
-      for (let i = 0; i < 10; ++i) {
+      for (let i = 0; i < 11; ++i) {
         // We might've scrolled to click a button - reset to (0, 0).
         await page.evaluate(() => window.scrollTo(0, 0));
         await page.click(`#btn${i}`);
@@ -48,8 +48,18 @@ module.exports.addTests = function({testRunner, expect, DeviceDescriptors}) {
         'button #6 clicked',
         'button #7 clicked',
         'button #8 clicked',
-        'button #9 clicked'
+        'button #9 clicked',
+        'button #10 clicked'
       ]);
+    });
+
+    it('should click wrapped links', async({page, server}) => {
+      await page.goto(server.PREFIX + '/wrappedlink.html');
+      await Promise.all([
+        page.click('a'),
+        page.waitForNavigation()
+      ]);
+      expect(page.url()).toBe(server.PREFIX + '/wrappedlink.html#clicked');
     });
 
     it('should click on checkbox input and toggle', async({page, server}) => {

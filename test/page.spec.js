@@ -786,6 +786,84 @@ module.exports.addTests = function({testRunner, expect, puppeteer, DeviceDescrip
     });
   });
 
+  describe('Page.waitForRequest', function() {
+    it('should work', async({page, server}) => {
+      await page.goto(server.EMPTY_PAGE);
+      const [request] = await Promise.all([
+        page.waitForRequest(server.PREFIX + '/digits/2.png'),
+        page.evaluate(() => {
+          fetch('/digits/1.png');
+          fetch('/digits/2.png');
+          fetch('/digits/3.png');
+        })
+      ]);
+      expect(request.url()).toBe(server.PREFIX + '/digits/2.png');
+    });
+    it('should work with predicate', async({page, server}) => {
+      await page.goto(server.EMPTY_PAGE);
+      const [request] = await Promise.all([
+        page.waitForRequest(request => request.url() === server.PREFIX + '/digits/2.png'),
+        page.evaluate(() => {
+          fetch('/digits/1.png');
+          fetch('/digits/2.png');
+          fetch('/digits/3.png');
+        })
+      ]);
+      expect(request.url()).toBe(server.PREFIX + '/digits/2.png');
+    });
+    it('should work with no timeout', async({page, server}) => {
+      await page.goto(server.EMPTY_PAGE);
+      const [request] = await Promise.all([
+        page.waitForRequest(server.PREFIX + '/digits/2.png', {timeout: 0}),
+        page.evaluate(() => setTimeout(() => {
+          fetch('/digits/1.png');
+          fetch('/digits/2.png');
+          fetch('/digits/3.png');
+        }, 50))
+      ]);
+      expect(request.url()).toBe(server.PREFIX + '/digits/2.png');
+    });
+  });
+
+  describe('Page.waitForResponse', function() {
+    it('should work', async({page, server}) => {
+      await page.goto(server.EMPTY_PAGE);
+      const [response] = await Promise.all([
+        page.waitForResponse(server.PREFIX + '/digits/2.png'),
+        page.evaluate(() => {
+          fetch('/digits/1.png');
+          fetch('/digits/2.png');
+          fetch('/digits/3.png');
+        })
+      ]);
+      expect(response.url()).toBe(server.PREFIX + '/digits/2.png');
+    });
+    it('should work with predicate', async({page, server}) => {
+      await page.goto(server.EMPTY_PAGE);
+      const [response] = await Promise.all([
+        page.waitForResponse(response => response.url() === server.PREFIX + '/digits/2.png'),
+        page.evaluate(() => {
+          fetch('/digits/1.png');
+          fetch('/digits/2.png');
+          fetch('/digits/3.png');
+        })
+      ]);
+      expect(response.url()).toBe(server.PREFIX + '/digits/2.png');
+    });
+    it('should work with no timeout', async({page, server}) => {
+      await page.goto(server.EMPTY_PAGE);
+      const [response] = await Promise.all([
+        page.waitForResponse(server.PREFIX + '/digits/2.png', {timeout: 0}),
+        page.evaluate(() => setTimeout(() => {
+          fetch('/digits/1.png');
+          fetch('/digits/2.png');
+          fetch('/digits/3.png');
+        }, 50))
+      ]);
+      expect(response.url()).toBe(server.PREFIX + '/digits/2.png');
+    });
+  });
+
   describe('Page.goBack', function() {
     it('should work', async({page, server}) => {
       await page.goto(server.EMPTY_PAGE);
@@ -1275,6 +1353,11 @@ module.exports.addTests = function({testRunner, expect, puppeteer, DeviceDescrip
       await page.setViewport(iPhone.viewport);
       await page.goto(server.PREFIX + '/detect-touch.html');
       expect(await page.evaluate(() => document.body.textContent.trim())).toBe('YES');
+    });
+    it('should detect touch when applying viewport with touches', async({page, server}) => {
+      await page.setViewport({ width: 800, height: 600, hasTouch: true });
+      await page.addScriptTag({url: server.PREFIX + '/modernizr.js'});
+      expect(await page.evaluate(() => Modernizr.touchevents)).toBe(true);
     });
     it('should support landscape emulation', async({page, server}) => {
       await page.goto(server.PREFIX + '/mobile.html');
