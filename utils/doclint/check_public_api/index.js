@@ -22,6 +22,7 @@ const Message = require('../Message');
 const EXCLUDE_CLASSES = new Set([
   'CSSCoverage',
   'Connection',
+  'CustomError',
   'EmulationManager',
   'FrameManager',
   'JSCoverage',
@@ -30,16 +31,18 @@ const EXCLUDE_CLASSES = new Set([
   'Multimap',
   'NavigatorWatcher',
   'NetworkManager',
-  'Pipe',
+  'PipeTransport',
   'TaskQueue',
   'WaitTask',
+  'WebSocketTransport',
 ]);
 
-const EXCLUDE_METHODS = new Set([
+const EXCLUDE_PROPERTIES = new Set([
   'Browser.create',
   'Headers.fromPayload',
   'Page.create',
   'JSHandle.toString',
+  'TimeoutError.name',
 ]);
 
 /**
@@ -137,7 +140,7 @@ function filterJSDocumentation(jsDocumentation) {
       // Exclude all constructors by default.
       if (member.name === 'constructor' && member.type === 'method')
         return false;
-      return !EXCLUDE_METHODS.has(`${cls.name}.${member.name}`);
+      return !EXCLUDE_PROPERTIES.has(`${cls.name}.${member.name}`);
     });
     classes.push(new Documentation.Class(cls.name, members));
   }

@@ -50,7 +50,7 @@ module.exports.addTests = function({testRunner, expect}) {
       const box = await elementHandle.boundingBox();
       expect(box).toEqual({ x: 8, y: 8, width: 100, height: 200 });
     });
-    xit('should work with SVG nodes', async({page, server}) => {
+    it('should work with SVG nodes', async({page, server}) => {
       await page.setContent(`
         <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500">
           <rect id="theRect" x="30" y="50" width="200" height="300"></rect>
@@ -198,6 +198,18 @@ module.exports.addTests = function({testRunner, expect}) {
     });
   });
 
+  describe('ElementHandle.isIntersectingViewport', function() {
+    it('should work', async({page, server}) => {
+      await page.goto(server.PREFIX + '/offscreenbuttons.html');
+      for (let i = 0; i < 11; ++i) {
+        const button = await page.$('#btn' + i);
+        // All but last button are visible.
+        const visible = i < 10;
+        expect(await button.isIntersectingViewport()).toBe(visible);
+      }
+    });
+  });
+
   describe('ElementHandle.screenshot', function() {
     it('should work', async({page, server}) => {
       await page.setViewport({width: 500, height: 500});
@@ -290,6 +302,11 @@ module.exports.addTests = function({testRunner, expect}) {
       await page.evaluate(element => element.remove(), elementHandle);
       const screenshotError = await elementHandle.screenshot().catch(error => error);
       expect(screenshotError.message).toBe('Node is either not visible or not an HTMLElement');
+    });
+    xit('should not hang with zero width/height element', async({page, server}) => {
+      await page.setContent('<div style="width: 0; height: 0"></div>');
+      const div = await page.$('div');
+      await div.screenshot();
     });
   });
 

@@ -20,13 +20,15 @@ const YELLOW_COLOR = '\x1b[33m';
 const RESET_COLOR = '\x1b[0m';
 
 class Reporter {
-  constructor(runner) {
+  constructor(runner, testFolder = null) {
     this._runner = runner;
+    this._testFolder = testFolder;
     runner.on('started', this._onStarted.bind(this));
     runner.on('terminated', this._onTerminated.bind(this));
     runner.on('finished', this._onFinished.bind(this));
     runner.on('teststarted', this._onTestStarted.bind(this));
     runner.on('testfinished', this._onTestFinished.bind(this));
+    this._workersState = new Map();
   }
 
   _onStarted() {
@@ -42,6 +44,26 @@ class Reporter {
     if (error && error.stack) {
       console.log('Stack:');
       console.log(error.stack.split('\n').map(line => '  ' + line).join('\n'));
+    }
+    console.log('WORKERS STATE');
+    const workerIds = Array.from(this._workersState.keys());
+    workerIds.sort();
+    for (const workerId of workerIds) {
+      const {isRunning, test} = this._workersState.get(workerId);
+      let description = '';
+      if (isRunning)
+        description = `${YELLOW_COLOR}RUNNING${RESET_COLOR}`;
+      else if (test.result === 'ok')
+        description = `${GREEN_COLOR}OK${RESET_COLOR}`;
+      else if (test.result === 'skipped')
+        description = `${YELLOW_COLOR}SKIPPED${RESET_COLOR}`;
+      else if (test.result === 'failed')
+        description = `${RED_COLOR}FAILED${RESET_COLOR}`;
+      else if (test.result === 'timedout')
+        description = `${RED_COLOR}TIMEDOUT${RESET_COLOR}`;
+      else
+        description = `${RED_COLOR}<UNKNOWN>${RESET_COLOR}`;
+      console.log(`  ${workerId}: [${description}] ${test.fullName} (${formatTestLocation(test)})`);
     }
     process.exit(2);
   }
@@ -61,7 +83,7 @@ class Reporter {
       console.log('\nFailures:');
       for (let i = 0; i < failedTests.length; ++i) {
         const test = failedTests[i];
-        console.log(`${i + 1}) ${test.fullName} (${formatLocation(test)})`);
+        console.log(`${i + 1}) ${test.fullName} (${formatTestLocation(test)})`);
         if (test.result === 'timedout') {
           console.log('  Message:');
           console.log(`    ${YELLOW_COLOR}Timeout Exceeded ${this._runner.timeout()}ms${RESET_COLOR}`);
@@ -69,19 +91,8 @@ class Reporter {
           console.log('  Message:');
           console.log(`    ${RED_COLOR}${test.error.message || test.error}${RESET_COLOR}`);
           console.log('  Stack:');
-          if (test.error.stack) {
-            const stack = test.error.stack.split('\n').map(line => '    ' + line);
-            let i = 0;
-            while (i < stack.length && !stack[i].includes(__dirname))
-              ++i;
-            while (i < stack.length && stack[i].includes(__dirname))
-              ++i;
-            if (i < stack.length) {
-              const indent = stack[i].match(/^\s*/)[0];
-              stack[i] = stack[i].substring(0, indent.length - 3) + YELLOW_COLOR + '⇨ ' + RESET_COLOR +  stack[i].substring(indent.length - 1);
-            }
-            console.log(stack.join('\n'));
-          }
+          if (test.error.stack)
+            console.log(this._beautifyStack(test.error.stack));
         }
         if (test.output) {
           console.log('  Output:');
@@ -98,7 +109,7 @@ class Reporter {
       for (let i = 0; i < skippedTests.length; ++i) {
         const test = skippedTests[i];
         console.log(`${i + 1}) ${test.fullName}`);
-        console.log(`  ${YELLOW_COLOR}Temporary disabled with xit${RESET_COLOR} ${formatLocation(test)}\n`);
+        console.log(`  ${YELLOW_COLOR}Temporary disabled with xit${RESET_COLOR} ${formatTestLocation(test)}\n`);
       }
     }
 
@@ -107,19 +118,33 @@ class Reporter {
     const milliseconds = Date.now() - this._timestamp;
     const seconds = milliseconds / 1000;
     console.log(`Finished in ${YELLOW_COLOR}${seconds}${RESET_COLOR} seconds`);
-
-    function formatLocation(test) {
-      const location = test.location;
-      if (!location)
-        return '';
-      return `${location.fileName}:${location.lineNumber}:${location.columnNumber}`;
-    }
   }
 
-  _onTestStarted() {
+  _beautifyStack(stack) {
+    if (!this._testFolder)
+      return stack;
+    const lines = stack.split('\n').map(line => '    ' + line);
+    // Find last stack line that include testrunner code.
+    let index = 0;
+    while (index < lines.length && !lines[index].includes(__dirname))
+      ++index;
+    while (index < lines.length && lines[index].includes(__dirname))
+      ++index;
+    if (index >= lines.length)
+      return stack;
+    const line = lines[index];
+    const fromIndex = line.lastIndexOf(this._testFolder) + this._testFolder.length;
+    const toIndex = line.lastIndexOf(')');
+    lines[index] = line.substring(0, fromIndex) + YELLOW_COLOR + line.substring(fromIndex, toIndex) + RESET_COLOR + line.substring(toIndex);
+    return lines.join('\n');
   }
 
-  _onTestFinished(test) {
+  _onTestStarted(test, workerId) {
+    this._workersState.set(workerId, {test, isRunning: true});
+  }
+
+  _onTestFinished(test, workerId) {
+    this._workersState.set(workerId, {test, isRunning: false});
     if (test.result === 'ok')
       process.stdout.write(`${GREEN_COLOR}.${RESET_COLOR}`);
     else if (test.result === 'skipped')
@@ -129,6 +154,13 @@ class Reporter {
     else if (test.result === 'timedout')
       process.stdout.write(`${RED_COLOR}T${RESET_COLOR}`);
   }
+}
+
+function formatTestLocation(test) {
+  const location = test.location;
+  if (!location)
+    return '';
+  return `${location.fileName}:${location.lineNumber}:${location.columnNumber}`;
 }
 
 module.exports = Reporter;

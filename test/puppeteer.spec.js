@@ -23,12 +23,12 @@ const readFileAsync = helper.promisify(fs.readFile);
 const statAsync = helper.promisify(fs.stat);
 const TMP_FOLDER = path.join(os.tmpdir(), 'pptr_tmp_folder-');
 const utils = require('./utils');
+const puppeteer = utils.requireRoot('index');
 
-module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBrowserOptions}) {
+module.exports.addTests = function({testRunner, expect, defaultBrowserOptions}) {
   const {describe, xdescribe, fdescribe} = testRunner;
   const {it, fit, xit} = testRunner;
   const {beforeAll, beforeEach, afterAll, afterEach} = testRunner;
-  const puppeteer = require(PROJECT_ROOT);
 
   describe('Puppeteer', function() {
     describe('BrowserFetcher', function() {
@@ -60,17 +60,31 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
         await rmAsync(downloadsFolder);
       });
     });
-    describe('AppMode', function() {
-      it('should work', async() => {
-        const options = Object.assign({appMode: true}, defaultBrowserOptions);
-        const browser = await puppeteer.launch(options);
-        const page = await browser.newPage();
-        expect(await page.evaluate('11 * 11')).toBe(121);
-        await page.close();
+    describe('Browser.disconnect', function() {
+      it('should reject navigation when browser closes', async({server}) => {
+        server.setRoute('/one-style.css', () => {});
+        const browser = await puppeteer.launch(defaultBrowserOptions);
+        const remote = await puppeteer.connect({browserWSEndpoint: browser.wsEndpoint()});
+        const page = await remote.newPage();
+        const navigationPromise = page.goto(server.PREFIX + '/one-style.html', {timeout: 60000}).catch(e => e);
+        await server.waitForRequest('/one-style.css');
+        await remote.disconnect();
+        const error = await navigationPromise;
+        expect(error.message).toBe('Navigation failed because browser has disconnected!');
+        await browser.close();
+      });
+      it('should reject waitForSelector when browser closes', async({server}) => {
+        server.setRoute('/empty.html', () => {});
+        const browser = await puppeteer.launch(defaultBrowserOptions);
+        const remote = await puppeteer.connect({browserWSEndpoint: browser.wsEndpoint()});
+        const page = await remote.newPage();
+        const watchdog = page.waitForSelector('div', {timeout: 60000}).catch(e => e);
+        await remote.disconnect();
+        const error = await watchdog;
+        expect(error.message).toBe('Protocol error (Runtime.callFunctionOn): Session closed. Most likely the page has been closed.');
         await browser.close();
       });
     });
-
     describe('Puppeteer.launch', function() {
       it('should reject all promises when browser is closed', async() => {
         const browser = await puppeteer.launch(defaultBrowserOptions);
@@ -145,8 +159,10 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
         await rmAsync(userDataDir).catch(e => {});
       });
       it('should return the default chrome arguments', async() => {
-        const args = puppeteer.defaultArgs();
-        expect(args).toContain('--no-first-run');
+        expect(puppeteer.defaultArgs()).toContain('--no-first-run');
+        expect(puppeteer.defaultArgs()).toContain('--headless');
+        expect(puppeteer.defaultArgs({headless: false})).not.toContain('--headless');
+        expect(puppeteer.defaultArgs({userDataDir: 'foo'})).toContain('--user-data-dir=foo');
       });
       it('should dump browser process stderr', async({server}) => {
         const dumpioTextToLog = 'MAGIC_DUMPIO_TEST';
@@ -154,7 +170,7 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
         const {spawn} = require('child_process');
         const options = Object.assign({}, defaultBrowserOptions, {dumpio: true});
         const res = spawn('node',
-            [path.join(__dirname, 'fixtures', 'dumpio.js'), PROJECT_ROOT, JSON.stringify(options), server.EMPTY_PAGE, dumpioTextToLog]);
+            [path.join(__dirname, 'fixtures', 'dumpio.js'), utils.projectRoot(), JSON.stringify(options), server.EMPTY_PAGE, dumpioTextToLog]);
         res.stderr.on('data', data => dumpioData += data.toString('utf8'));
         await new Promise(resolve => res.on('close', resolve));
 
@@ -162,7 +178,7 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
       });
       it('should close the browser when the node process closes', async({ server }) => {
         const {spawn, execSync} = require('child_process');
-        const res = spawn('node', [path.join(__dirname, 'fixtures', 'closeme.js'), PROJECT_ROOT, JSON.stringify(defaultBrowserOptions)]);
+        const res = spawn('node', [path.join(__dirname, 'fixtures', 'closeme.js'), utils.projectRoot(), JSON.stringify(defaultBrowserOptions)]);
         let wsEndPointCallback;
         const wsEndPointPromise = new Promise(x => wsEndPointCallback = x);
         let output = '';
@@ -193,7 +209,6 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
       });
       it('should support the pipe argument', async() => {
         const options = Object.assign({}, defaultBrowserOptions);
-        options.ignoreDefaultArgs = true;
         options.args = ['--remote-debugging-pipe'].concat(options.args);
         const browser = await puppeteer.launch(options);
         expect(browser.wsEndpoint()).toBe('');
@@ -209,6 +224,19 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
         const page = await browser.newPage();
         expect(await page.evaluate('11 * 11')).toBe(121);
         await page.close();
+        await browser.close();
+      });
+      it('should filter out ignored default arguments', async() => {
+        // Make sure we launch with `--enable-automation` by default.
+        const defaultArgs = puppeteer.defaultArgs();
+        const browser = await puppeteer.launch(Object.assign({}, defaultBrowserOptions, {
+          // Ignore first and third default argument.
+          ignoreDefaultArgs: [ defaultArgs[0], defaultArgs[2] ],
+        }));
+        const spawnargs = browser.process().spawnargs;
+        expect(spawnargs.indexOf(defaultArgs[0])).toBe(-1);
+        expect(spawnargs.indexOf(defaultArgs[1])).not.toBe(-1);
+        expect(spawnargs.indexOf(defaultArgs[2])).toBe(-1);
         await browser.close();
       });
       it('should have default url when launching browser', async function() {
@@ -227,6 +255,41 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
         if (pages[0].url() !== customUrl)
           await pages[0].waitForNavigation();
         expect(pages[0].url()).toBe(customUrl);
+        await browser.close();
+      });
+      it('should set the default viewport', async() => {
+        const options = Object.assign({}, defaultBrowserOptions, {
+          defaultViewport: {
+            width: 456,
+            height: 789
+          }
+        });
+        const browser = await puppeteer.launch(options);
+        const page = await browser.newPage();
+        expect(await page.evaluate('window.innerWidth')).toBe(456);
+        expect(await page.evaluate('window.innerHeight')).toBe(789);
+        await browser.close();
+      });
+      it('should disable the default viewport', async() => {
+        const options = Object.assign({}, defaultBrowserOptions, {
+          defaultViewport: null
+        });
+        const browser = await puppeteer.launch(options);
+        const page = await browser.newPage();
+        expect(page.viewport()).toBe(null);
+        await browser.close();
+      });
+      it('should take fullPage screenshots when defaultViewport is null', async({server}) => {
+        const options = Object.assign({}, defaultBrowserOptions, {
+          defaultViewport: null
+        });
+        const browser = await puppeteer.launch(options);
+        const page = await browser.newPage();
+        await page.goto(server.PREFIX + '/grid.html');
+        const screenshot = await page.screenshot({
+          fullPage: true
+        });
+        expect(screenshot).toBeInstanceOf(Buffer);
         await browser.close();
       });
     });
@@ -279,6 +342,21 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
         const executablePath = puppeteer.executablePath();
         expect(fs.existsSync(executablePath)).toBe(true);
       });
+    });
+  });
+
+  describe('Browser target events', function() {
+    it('should work', async({server}) => {
+      const browser = await puppeteer.launch(defaultBrowserOptions);
+      const events = [];
+      browser.on('targetcreated', () => events.push('CREATED'));
+      browser.on('targetchanged', () => events.push('CHANGED'));
+      browser.on('targetdestroyed', () => events.push('DESTROYED'));
+      const page = await browser.newPage();
+      await page.goto(server.EMPTY_PAGE);
+      await page.close();
+      expect(events).toEqual(['CREATED', 'CHANGED', 'DESTROYED']);
+      await browser.close();
     });
   });
 

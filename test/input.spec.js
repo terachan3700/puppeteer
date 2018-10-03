@@ -16,24 +16,34 @@
 
 const path = require('path');
 const utils = require('./utils');
+const DeviceDescriptors = utils.requireRoot('DeviceDescriptors');
+const iPhone = DeviceDescriptors['iPhone 6'];
 
-module.exports.addTests = function({testRunner, expect, DeviceDescriptors}) {
+module.exports.addTests = function({testRunner, expect}) {
   const {describe, xdescribe, fdescribe} = testRunner;
   const {it, fit, xit} = testRunner;
   const {beforeAll, beforeEach, afterAll, afterEach} = testRunner;
-  const iPhone = DeviceDescriptors['iPhone 6'];
   describe('input', function() {
     it('should click the button', async({page, server}) => {
       await page.goto(server.PREFIX + '/input/button.html');
       await page.click('button');
       expect(await page.evaluate(() => result)).toBe('Clicked');
     });
+    it('should click with disabled javascript', async({page, server}) => {
+      await page.setJavaScriptEnabled(false);
+      await page.goto(server.PREFIX + '/wrappedlink.html');
+      await Promise.all([
+        page.click('a'),
+        page.waitForNavigation()
+      ]);
+      expect(page.url()).toBe(server.PREFIX + '/wrappedlink.html#clicked');
+    });
 
     it('should click offscreen buttons', async({page, server}) => {
       await page.goto(server.PREFIX + '/offscreenbuttons.html');
       const messages = [];
       page.on('console', msg => messages.push(msg.text()));
-      for (let i = 0; i < 10; ++i) {
+      for (let i = 0; i < 11; ++i) {
         // We might've scrolled to click a button - reset to (0, 0).
         await page.evaluate(() => window.scrollTo(0, 0));
         await page.click(`#btn${i}`);
@@ -48,8 +58,18 @@ module.exports.addTests = function({testRunner, expect, DeviceDescriptors}) {
         'button #6 clicked',
         'button #7 clicked',
         'button #8 clicked',
-        'button #9 clicked'
+        'button #9 clicked',
+        'button #10 clicked'
       ]);
+    });
+
+    it('should click wrapped links', async({page, server}) => {
+      await page.goto(server.PREFIX + '/wrappedlink.html');
+      await Promise.all([
+        page.click('a'),
+        page.waitForNavigation()
+      ]);
+      expect(page.url()).toBe(server.PREFIX + '/wrappedlink.html#clicked');
     });
 
     it('should click on checkbox input and toggle', async({page, server}) => {
@@ -452,6 +472,19 @@ module.exports.addTests = function({testRunner, expect, DeviceDescriptors}) {
 
       error = await page.keyboard.press('😊').catch(e => e);
       expect(error && error.message).toBe('Unknown key: "😊"');
+    });
+    it('should type emoji', async({page, server}) => {
+      await page.goto(server.PREFIX + '/input/textarea.html');
+      await page.type('textarea', '👹 Tokyo street Japan 🇯🇵');
+      expect(await page.$eval('textarea', textarea => textarea.value)).toBe('👹 Tokyo street Japan 🇯🇵');
+    });
+    it('should type emoji into an iframe', async({page, server}) => {
+      await page.goto(server.EMPTY_PAGE);
+      await utils.attachFrame(page, 'emoji-test', server.PREFIX + '/input/textarea.html');
+      const frame = page.frames()[1];
+      const textarea = await frame.$('textarea');
+      await textarea.type('👹 Tokyo street Japan 🇯🇵');
+      expect(await frame.$eval('textarea', textarea => textarea.value)).toBe('👹 Tokyo street Japan 🇯🇵');
     });
     function dimensions() {
       const rect = document.querySelector('textarea').getBoundingClientRect();
