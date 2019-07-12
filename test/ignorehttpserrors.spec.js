@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBrowserOptions}) {
-  const {describe, xdescribe, fdescribe} = testRunner;
-  const {it, fit, xit} = testRunner;
+module.exports.addTests = function({testRunner, expect, defaultBrowserOptions, puppeteer}) {
+  const {describe, xdescribe, fdescribe, describe_fails_ffox} = testRunner;
+  const {it, fit, xit, it_fails_ffox} = testRunner;
   const {beforeAll, beforeEach, afterAll, afterEach} = testRunner;
-  const puppeteer = require(PROJECT_ROOT);
   describe('ignoreHTTPSErrors', function() {
     beforeAll(async state => {
       const options = Object.assign({ignoreHTTPSErrors: true}, defaultBrowserOptions);
@@ -29,29 +28,52 @@ module.exports.addTests = function({testRunner, expect, PROJECT_ROOT, defaultBro
       delete state.browser;
     });
     beforeEach(async state => {
-      state.page = await state.browser.newPage();
+      state.context = await state.browser.createIncognitoBrowserContext();
+      state.page = await state.context.newPage();
     });
     afterEach(async state => {
-      await state.page.close();
+      await state.context.close();
+      delete state.context;
       delete state.page;
     });
+
+    describe('Response.securityDetails', function() {
+      it('should work', async({page, httpsServer}) => {
+        const response = await page.goto(httpsServer.EMPTY_PAGE);
+        const securityDetails = response.securityDetails();
+        expect(securityDetails.issuer()).toBe('puppeteer-tests');
+        expect(securityDetails.protocol()).toBe('TLS 1.2');
+        expect(securityDetails.subjectName()).toBe('puppeteer-tests');
+        expect(securityDetails.validFrom()).toBe(1550084863);
+        expect(securityDetails.validTo()).toBe(33086084863);
+      });
+      it('should be |null| for non-secure requests', async({page, server}) => {
+        const response = await page.goto(server.EMPTY_PAGE);
+        expect(response.securityDetails()).toBe(null);
+      });
+      it('Network redirects should report SecurityDetails', async({page, httpsServer}) => {
+        httpsServer.setRedirect('/plzredirect', '/empty.html');
+        const responses =  [];
+        page.on('response', response => responses.push(response));
+        await page.goto(httpsServer.PREFIX + '/plzredirect');
+        expect(responses.length).toBe(2);
+        expect(responses[0].status()).toBe(302);
+        const securityDetails = responses[0].securityDetails();
+        expect(securityDetails.protocol()).toBe('TLS 1.2');
+      });
+    });
+
     it('should work', async({page, httpsServer}) => {
       let error = null;
       const response = await page.goto(httpsServer.EMPTY_PAGE).catch(e => error = e);
       expect(error).toBe(null);
       expect(response.ok()).toBe(true);
-      expect(response.securityDetails()).toBeTruthy();
-      expect(response.securityDetails().protocol()).toBe('TLS 1.2');
     });
-    it('Network redirects should report SecurityDetails', async({page, httpsServer}) => {
-      httpsServer.setRedirect('/plzredirect', '/empty.html');
-      const responses =  [];
-      page.on('response', response => responses.push(response));
-      await page.goto(httpsServer.PREFIX + '/plzredirect');
-      expect(responses.length).toBe(2);
-      expect(responses[0].status()).toBe(302);
-      const securityDetails = responses[0].securityDetails();
-      expect(securityDetails.protocol()).toBe('TLS 1.2');
+    it('should work with request interception', async({page, server, httpsServer}) => {
+      await page.setRequestInterception(true);
+      page.on('request', request => request.continue());
+      const response = await page.goto(httpsServer.EMPTY_PAGE);
+      expect(response.status()).toBe(200);
     });
     it('should work with mixed content', async({page, server, httpsServer}) => {
       httpsServer.setRoute('/mixedcontent.html', (req, res) => {

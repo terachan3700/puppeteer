@@ -17,16 +17,21 @@
 const fs = require('fs');
 const path = require('path');
 
-module.exports.addTests = function({testRunner, expect}) {
+module.exports.addTests = function({testRunner, expect, defaultBrowserOptions, puppeteer}) {
   const {describe, xdescribe, fdescribe} = testRunner;
   const {it, fit, xit} = testRunner;
   const {beforeAll, beforeEach, afterAll, afterEach} = testRunner;
 
   describe('Tracing', function() {
-    beforeEach(function(state) {
+    beforeEach(async function(state) {
       state.outputFile = path.join(__dirname, 'assets', `trace-${state.parallelIndex}.json`);
+      state.browser = await puppeteer.launch(defaultBrowserOptions);
+      state.page = await state.browser.newPage();
     });
-    afterEach(function(state) {
+    afterEach(async function(state) {
+      await state.browser.close();
+      state.browser = null;
+      state.page = null;
       if (fs.existsSync(state.outputFile)) {
         fs.unlinkSync(state.outputFile);
         state.outputFile = null;
@@ -60,6 +65,12 @@ module.exports.addTests = function({testRunner, expect}) {
       const trace = await page.tracing.stop();
       const buf = fs.readFileSync(outputFile);
       expect(trace.toString()).toEqual(buf.toString());
+    });
+    it('should work without options', async({page, server, outputFile}) => {
+      await page.tracing.start();
+      await page.goto(server.PREFIX + '/grid.html');
+      const trace = await page.tracing.stop();
+      expect(trace).toBeTruthy();
     });
     it('should return null in case of Buffer error', async({page, server}) => {
       await page.tracing.start({screenshots: true});

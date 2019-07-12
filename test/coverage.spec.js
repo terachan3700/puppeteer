@@ -22,7 +22,7 @@ module.exports.addTests = function({testRunner, expect}) {
   describe('JSCoverage', function() {
     it('should work', async function({page, server}) {
       await page.coverage.startJSCoverage();
-      await page.goto(server.PREFIX + '/jscoverage/simple.html');
+      await page.goto(server.PREFIX + '/jscoverage/simple.html', {waitUntil: 'networkidle0'});
       const coverage = await page.coverage.stopJSCoverage();
       expect(coverage.length).toBe(1);
       expect(coverage[0].url).toContain('/jscoverage/simple.html');
@@ -109,6 +109,14 @@ module.exports.addTests = function({testRunner, expect}) {
         expect(coverage.length).toBe(0);
       });
     });
+    xit('should not hang when there is a debugger statement', async function({page, server}) {
+      await page.coverage.startJSCoverage();
+      await page.goto(server.EMPTY_PAGE);
+      await page.evaluate(() => {
+        debugger; // eslint-disable-line no-debugger
+      });
+      await page.coverage.stopJSCoverage();
+    });
   });
 
   describe('CSSCoverage', function() {
@@ -188,6 +196,20 @@ module.exports.addTests = function({testRunner, expect}) {
         const coverage = await page.coverage.stopCSSCoverage();
         expect(coverage.length).toBe(0);
       });
+    });
+    it('should work with a recently loaded stylesheet', async function({page, server}) {
+      await page.coverage.startCSSCoverage();
+      await page.evaluate(async url => {
+        document.body.textContent = 'hello, world';
+
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = url;
+        document.head.appendChild(link);
+        await new Promise(x => link.onload = x);
+      }, server.PREFIX + '/csscoverage/stylesheet1.css');
+      const coverage = await page.coverage.stopCSSCoverage();
+      expect(coverage.length).toBe(1);
     });
   });
 };

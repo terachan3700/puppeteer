@@ -16,9 +16,9 @@
 
 const utils = require('./utils');
 
-module.exports.addTests = function({testRunner, expect}) {
-  const {describe, xdescribe, fdescribe} = testRunner;
-  const {it, fit, xit} = testRunner;
+module.exports.addTests = function({testRunner, expect, CHROME}) {
+  const {describe, xdescribe, fdescribe, describe_fails_ffox} = testRunner;
+  const {it, fit, xit, it_fails_ffox} = testRunner;
   const {beforeAll, beforeEach, afterAll, afterEach} = testRunner;
 
   describe('ElementHandle.boundingBox', function() {
@@ -35,7 +35,10 @@ module.exports.addTests = function({testRunner, expect}) {
       const nestedFrame = page.frames()[1].childFrames()[1];
       const elementHandle = await nestedFrame.$('div');
       const box = await elementHandle.boundingBox();
-      expect(box).toEqual({ x: 28, y: 260, width: 264, height: 18 });
+      if (CHROME)
+        expect(box).toEqual({ x: 28, y: 260, width: 264, height: 18 });
+      else
+        expect(box).toEqual({ x: 28, y: 182, width: 254, height: 18 });
     });
     it('should return null for invisible elements', async({page, server}) => {
       await page.setContent('<div style="display:none">hi</div>');
@@ -66,7 +69,7 @@ module.exports.addTests = function({testRunner, expect}) {
     });
   });
 
-  describe('ElementHandle.boxModel', function() {
+  describe_fails_ffox('ElementHandle.boxModel', function() {
     it('should work', async({page, server}) => {
       await page.goto(server.PREFIX + '/resetcss.html');
 
@@ -207,207 +210,6 @@ module.exports.addTests = function({testRunner, expect}) {
         const visible = i < 10;
         expect(await button.isIntersectingViewport()).toBe(visible);
       }
-    });
-  });
-
-  describe('ElementHandle.screenshot', function() {
-    it('should work', async({page, server}) => {
-      await page.setViewport({width: 500, height: 500});
-      await page.goto(server.PREFIX + '/grid.html');
-      await page.evaluate(() => window.scrollBy(50, 100));
-      const elementHandle = await page.$('.box:nth-of-type(3)');
-      const screenshot = await elementHandle.screenshot();
-      expect(screenshot).toBeGolden('screenshot-element-bounding-box.png');
-    });
-    it('should take into account padding and border', async({page, server}) => {
-      await page.setViewport({width: 500, height: 500});
-      await page.setContent(`
-        something above
-        <style>div {
-          border: 2px solid blue;
-          background: green;
-          width: 50px;
-          height: 50px;
-        }
-        </style>
-        <div></div>
-      `);
-      const elementHandle = await page.$('div');
-      const screenshot = await elementHandle.screenshot();
-      expect(screenshot).toBeGolden('screenshot-element-padding-border.png');
-    });
-    it('should capture full element when larger than viewport', async({page, server}) => {
-      await page.setViewport({width: 500, height: 500});
-
-      await page.setContent(`
-        something above
-        <style>
-        div.to-screenshot {
-          border: 1px solid blue;
-          width: 600px;
-          height: 600px;
-          margin-left: 50px;
-        }
-        ::-webkit-scrollbar{
-          display: none;
-        }
-        </style>
-        <div class="to-screenshot"></div>
-      `);
-      const elementHandle = await page.$('div.to-screenshot');
-      const screenshot = await elementHandle.screenshot();
-      expect(screenshot).toBeGolden('screenshot-element-larger-than-viewport.png');
-
-      expect(await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }))).toEqual({ w: 500, h: 500 });
-    });
-    it('should scroll element into view', async({page, server}) => {
-      await page.setViewport({width: 500, height: 500});
-      await page.setContent(`
-        something above
-        <style>div.above {
-          border: 2px solid blue;
-          background: red;
-          height: 1500px;
-        }
-        div.to-screenshot {
-          border: 2px solid blue;
-          background: green;
-          width: 50px;
-          height: 50px;
-        }
-        </style>
-        <div class="above"></div>
-        <div class="to-screenshot"></div>
-      `);
-      const elementHandle = await page.$('div.to-screenshot');
-      const screenshot = await elementHandle.screenshot();
-      expect(screenshot).toBeGolden('screenshot-element-scrolled-into-view.png');
-    });
-    it('should work with a rotated element', async({page, server}) => {
-      await page.setViewport({width: 500, height: 500});
-      await page.setContent(`<div style="position:absolute;
-                                        top: 100px;
-                                        left: 100px;
-                                        width: 100px;
-                                        height: 100px;
-                                        background: green;
-                                        transform: rotateZ(200deg);">&nbsp;</div>`);
-      const elementHandle = await page.$('div');
-      const screenshot = await elementHandle.screenshot();
-      expect(screenshot).toBeGolden('screenshot-element-rotate.png');
-    });
-    it('should fail to screenshot a detached element', async({page, server}) => {
-      await page.setContent('<h1>remove this</h1>');
-      const elementHandle = await page.$('h1');
-      await page.evaluate(element => element.remove(), elementHandle);
-      const screenshotError = await elementHandle.screenshot().catch(error => error);
-      expect(screenshotError.message).toBe('Node is either not visible or not an HTMLElement');
-    });
-  });
-
-  describe('ElementHandle.$', function() {
-    it('should query existing element', async({page, server}) => {
-      await page.goto(server.PREFIX + '/playground.html');
-      await page.setContent('<html><body><div class="second"><div class="inner">A</div></div></body></html>');
-      const html = await page.$('html');
-      const second = await html.$('.second');
-      const inner = await second.$('.inner');
-      const content = await page.evaluate(e => e.textContent, inner);
-      expect(content).toBe('A');
-    });
-
-    it('should return null for non-existing element', async({page, server}) => {
-      await page.setContent('<html><body><div class="second"><div class="inner">B</div></div></body></html>');
-      const html = await page.$('html');
-      const second = await html.$('.third');
-      expect(second).toBe(null);
-    });
-  });
-  describe('ElementHandle.$eval', function() {
-    it('should work', async({page, server}) => {
-      await page.setContent('<html><body><div class="tweet"><div class="like">100</div><div class="retweets">10</div></div></body></html>');
-      const tweet = await page.$('.tweet');
-      const content = await tweet.$eval('.like', node => node.innerText);
-      expect(content).toBe('100');
-    });
-
-    it('should retrieve content from subtree', async({page, server}) => {
-      const htmlContent = '<div class="a">not-a-child-div</div><div id="myId"><div class="a">a-child-div</div></div>';
-      await page.setContent(htmlContent);
-      const elementHandle = await page.$('#myId');
-      const content = await elementHandle.$eval('.a', node => node.innerText);
-      expect(content).toBe('a-child-div');
-    });
-
-    it('should throw in case of missing selector', async({page, server}) => {
-      const htmlContent = '<div class="a">not-a-child-div</div><div id="myId"></div>';
-      await page.setContent(htmlContent);
-      const elementHandle = await page.$('#myId');
-      const errorMessage = await elementHandle.$eval('.a', node => node.innerText).catch(error => error.message);
-      expect(errorMessage).toBe(`Error: failed to find element matching selector ".a"`);
-    });
-  });
-  describe('ElementHandle.$$eval', function() {
-    it('should work', async({page, server}) => {
-      await page.setContent('<html><body><div class="tweet"><div class="like">100</div><div class="like">10</div></div></body></html>');
-      const tweet = await page.$('.tweet');
-      const content = await tweet.$$eval('.like', nodes => nodes.map(n => n.innerText));
-      expect(content).toEqual(['100', '10']);
-    });
-
-    it('should retrieve content from subtree', async({page, server}) => {
-      const htmlContent = '<div class="a">not-a-child-div</div><div id="myId"><div class="a">a1-child-div</div><div class="a">a2-child-div</div></div>';
-      await page.setContent(htmlContent);
-      const elementHandle = await page.$('#myId');
-      const content = await elementHandle.$$eval('.a', nodes => nodes.map(n => n.innerText));
-      expect(content).toEqual(['a1-child-div', 'a2-child-div']);
-    });
-
-    it('should not throw in case of missing selector', async({page, server}) => {
-      const htmlContent = '<div class="a">not-a-child-div</div><div id="myId"></div>';
-      await page.setContent(htmlContent);
-      const elementHandle = await page.$('#myId');
-      const nodesLength = await elementHandle.$$eval('.a', nodes => nodes.length);
-      expect(nodesLength).toBe(0);
-    });
-
-  });
-
-  describe('ElementHandle.$$', function() {
-    it('should query existing elements', async({page, server}) => {
-      await page.setContent('<html><body><div>A</div><br/><div>B</div></body></html>');
-      const html = await page.$('html');
-      const elements = await html.$$('div');
-      expect(elements.length).toBe(2);
-      const promises = elements.map(element => page.evaluate(e => e.textContent, element));
-      expect(await Promise.all(promises)).toEqual(['A', 'B']);
-    });
-
-    it('should return empty array for non-existing elements', async({page, server}) => {
-      await page.setContent('<html><body><span>A</span><br/><span>B</span></body></html>');
-      const html = await page.$('html');
-      const elements = await html.$$('div');
-      expect(elements.length).toBe(0);
-    });
-  });
-
-
-  describe('ElementHandle.$x', function() {
-    it('should query existing element', async({page, server}) => {
-      await page.goto(server.PREFIX + '/playground.html');
-      await page.setContent('<html><body><div class="second"><div class="inner">A</div></div></body></html>');
-      const html = await page.$('html');
-      const second = await html.$x(`./body/div[contains(@class, 'second')]`);
-      const inner = await second[0].$x(`./div[contains(@class, 'inner')]`);
-      const content = await page.evaluate(e => e.textContent, inner[0]);
-      expect(content).toBe('A');
-    });
-
-    it('should return null for non-existing element', async({page, server}) => {
-      await page.setContent('<html><body><div class="second"><div class="inner">B</div></div></body></html>');
-      const html = await page.$('html');
-      const second = await html.$x(`/div[contains(@class, 'third')]`);
-      expect(second).toEqual([]);
     });
   });
 };

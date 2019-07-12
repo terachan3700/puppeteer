@@ -1,10 +1,12 @@
+const utils = require('./utils');
+const {waitEvent} = utils;
 
 module.exports.addTests = function({testRunner, expect}) {
-  const {describe, xdescribe, fdescribe} = testRunner;
+  const {describe, xdescribe, fdescribe, describe_fails_ffox} = testRunner;
   const {it, fit, xit} = testRunner;
   const {beforeAll, beforeEach, afterAll, afterEach} = testRunner;
 
-  describe('Workers', function() {
+  describe_fails_ffox('Workers', function() {
     it('Page.workers', async function({page, server}) {
       await Promise.all([
         new Promise(x => page.once('workercreated', x)),
@@ -15,7 +17,7 @@ module.exports.addTests = function({testRunner, expect}) {
       expect(await worker.evaluate(() => self.workerFunction())).toBe('worker function result');
 
       await page.goto(server.EMPTY_PAGE);
-      expect(page.workers()).toEqual([]);
+      expect(page.workers().length).toBe(0);
     });
     it('should emit created and destroyed events', async function({page}) {
       const workerCreatedPromise = new Promise(x => page.once('workercreated', x));
@@ -29,10 +31,16 @@ module.exports.addTests = function({testRunner, expect}) {
       expect(error.message).toContain('Most likely the worker has been closed.');
     });
     it('should report console logs', async function({page}) {
-      const logPromise = new Promise(x => page.on('console', x));
-      await page.evaluate(() => new Worker(`data:text/javascript,console.log(1)`));
-      const log = await logPromise;
-      expect(log.text()).toBe('1');
+      const [message] = await Promise.all([
+        waitEvent(page, 'console'),
+        page.evaluate(() => new Worker(`data:text/javascript,console.log(1)`)),
+      ]);
+      expect(message.text()).toBe('1');
+      expect(message.location()).toEqual({
+        url: 'data:text/javascript,console.log(1)',
+        lineNumber: 0,
+        columnNumber: 8,
+      });
     });
     it('should have JSHandles for console logs', async function({page}) {
       const logPromise = new Promise(x => page.on('console', x));

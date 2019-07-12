@@ -13,42 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const fs = require('fs');
-const rm = require('rimraf').sync;
 const path = require('path');
-const SimpleServer = require('./server/SimpleServer');
-const GoldenUtils = require('./golden-utils');
-const GOLDEN_DIR = path.join(__dirname, 'golden');
-const OUTPUT_DIR = path.join(__dirname, 'output');
-const {TestRunner, Reporter, Matchers} = require('../utils/testrunner/');
-
-const {helper, assert} = require('../lib/helper');
-if (process.env.COVERAGE)
-  helper.recordPublicAPICoverage();
-
-const PROJECT_ROOT = fs.existsSync(path.join(__dirname, '..', 'package.json')) ? path.join(__dirname, '..') : path.join(__dirname, '..', '..');
-const puppeteer = require(PROJECT_ROOT);
-const DeviceDescriptors = require(path.join(PROJECT_ROOT, 'DeviceDescriptors'));
-
-const YELLOW_COLOR = '\x1b[33m';
-const RESET_COLOR = '\x1b[0m';
-
-const headless = (process.env.HEADLESS || 'true').trim().toLowerCase() === 'true';
-const executablePath = process.env.CHROME;
-
-if (executablePath)
-  console.warn(`${YELLOW_COLOR}WARN: running tests with ${executablePath}${RESET_COLOR}`);
-// Make sure the `npm install` was run after the chromium roll.
-assert(fs.existsSync(puppeteer.executablePath()), `Chromium is not Downloaded. Run 'npm install' and try to re-run tests`);
-
-const slowMo = parseInt((process.env.SLOW_MO || '0').trim(), 10);
-const defaultBrowserOptions = {
-  executablePath,
-  slowMo,
-  headless,
-  dumpio: (process.env.DUMPIO || 'false').trim().toLowerCase() === 'true',
-  args: ['--no-sandbox']
-};
+const {TestServer} = require('../utils/testserver/');
+const {TestRunner, Reporter} = require('../utils/testrunner/');
+const utils = require('./utils');
 
 let parallel = 1;
 if (process.env.PPTR_PARALLEL_TESTS)
@@ -58,15 +26,12 @@ if (parallelArgIndex !== -1)
   parallel = parseInt(process.argv[parallelArgIndex + 1], 10);
 require('events').defaultMaxListeners *= parallel;
 
-const timeout = slowMo ? 0 : 10 * 1000;
+// Timeout to 20 seconds on Appveyor instances.
+let timeout = process.env.APPVEYOR ? 20 * 1000 : 10 * 1000;
+if (!isNaN(process.env.TIMEOUT))
+  timeout = parseInt(process.env.TIMEOUT, 10);
 const testRunner = new TestRunner({timeout, parallel});
-const {expect} = new Matchers({
-  toBeGolden: GoldenUtils.compare.bind(null, GOLDEN_DIR, OUTPUT_DIR)
-});
-const {describe, it, xit, beforeAll, afterAll, beforeEach, afterEach} = testRunner;
-
-if (fs.existsSync(OUTPUT_DIR))
-  rm(OUTPUT_DIR);
+const {describe, fdescribe, beforeAll, afterAll, beforeEach, afterEach} = testRunner;
 
 console.log('Testing on Node', process.version);
 
@@ -75,15 +40,17 @@ beforeAll(async state => {
   const cachedPath = path.join(__dirname, 'assets', 'cached');
 
   const port = 8907 + state.parallelIndex * 2;
-  state.server = await SimpleServer.create(assetsPath, port);
+  state.server = await TestServer.create(assetsPath, port);
   state.server.enableHTTPCache(cachedPath);
+  state.server.PORT = port;
   state.server.PREFIX = `http://localhost:${port}`;
   state.server.CROSS_PROCESS_PREFIX = `http://127.0.0.1:${port}`;
   state.server.EMPTY_PAGE = `http://localhost:${port}/empty.html`;
 
   const httpsPort = port + 1;
-  state.httpsServer = await SimpleServer.createHTTPS(assetsPath, httpsPort);
+  state.httpsServer = await TestServer.createHTTPS(assetsPath, httpsPort);
   state.httpsServer.enableHTTPCache(cachedPath);
+  state.httpsServer.PORT = httpsPort;
   state.httpsServer.PREFIX = `https://localhost:${httpsPort}`;
   state.httpsServer.CROSS_PROCESS_PREFIX = `https://127.0.0.1:${httpsPort}`;
   state.httpsServer.EMPTY_PAGE = `https://localhost:${httpsPort}/empty.html`;
@@ -101,70 +68,31 @@ beforeEach(async({server, httpsServer}) => {
   httpsServer.reset();
 });
 
-describe('Page', function() {
-  beforeAll(async state => {
-    state.browser = await puppeteer.launch(defaultBrowserOptions);
+const CHROMIUM_NO_COVERAGE = new Set([
+  'page.bringToFront',
+]);
+
+if (process.env.BROWSER === 'firefox') {
+  testRunner.addTestDSL('it_fails_ffox', 'skip');
+  testRunner.addSuiteDSL('describe_fails_ffox', 'skip');
+  describe('Firefox', () => {
+    require('./puppeteer.spec.js').addTests({
+      product: 'Firefox',
+      puppeteerPath: path.resolve(__dirname, '../experimental/puppeteer-firefox/'),
+      testRunner,
+    });
   });
-
-  afterAll(async state => {
-    await state.browser.close();
-    state.browser = null;
-  });
-
-  beforeEach(async(state, test) => {
-    state.page = await state.browser.newPage();
-    const rl = require('readline').createInterface({input: state.browser.process().stderr});
-    test.output = '';
-    rl.on('line', onLine);
-    state.tearDown = () => {
-      rl.removeListener('line', onLine);
-      rl.close();
-    };
-    function onLine(line) {
-      test.output += line + '\n';
-    }
-  });
-
-  afterEach(async state => {
-    state.tearDown();
-    await state.page.close();
-    state.page = null;
-  });
-
-  // Page-level tests that are given a browser and a page.
-  require('./CDPSession.spec.js').addTests({testRunner, expect});
-  require('./browser.spec.js').addTests({testRunner, expect, puppeteer, headless});
-  require('./browsercontext.spec.js').addTests({testRunner, expect, puppeteer});
-  require('./cookies.spec.js').addTests({testRunner, expect});
-  require('./coverage.spec.js').addTests({testRunner, expect});
-  require('./elementhandle.spec.js').addTests({testRunner, expect});
-  require('./frame.spec.js').addTests({testRunner, expect});
-  require('./input.spec.js').addTests({testRunner, expect, DeviceDescriptors});
-  require('./jshandle.spec.js').addTests({testRunner, expect});
-  require('./network.spec.js').addTests({testRunner, expect});
-  require('./page.spec.js').addTests({testRunner, expect, puppeteer, DeviceDescriptors, headless});
-  require('./target.spec.js').addTests({testRunner, expect, puppeteer});
-  require('./tracing.spec.js').addTests({testRunner, expect});
-  require('./worker.spec.js').addTests({testRunner, expect});
-});
-
-// Top-level tests that launch Browser themselves.
-require('./ignorehttpserrors.spec.js').addTests({testRunner, expect, PROJECT_ROOT, defaultBrowserOptions});
-require('./puppeteer.spec.js').addTests({testRunner, expect, PROJECT_ROOT, defaultBrowserOptions});
-require('./headful.spec.js').addTests({testRunner, expect, PROJECT_ROOT, defaultBrowserOptions});
-
-if (process.env.COVERAGE) {
-  describe('COVERAGE', function() {
-    const coverage = helper.publicAPICoverage();
-    const disabled = new Set(['page.bringToFront']);
-    if (!headless)
-      disabled.add('page.pdf');
-
-    for (const method of coverage.keys()) {
-      (disabled.has(method) ? xit : it)(`public api '${method}' should be called`, async({page, server}) => {
-        expect(coverage.get(method)).toBe(true);
-      });
-    }
+} else {
+  testRunner.addTestDSL('it_fails_ffox', 'run');
+  testRunner.addSuiteDSL('describe_fails_ffox', 'run');
+  describe('Chromium', () => {
+    require('./puppeteer.spec.js').addTests({
+      product: 'Chromium',
+      puppeteerPath: utils.projectRoot(),
+      testRunner,
+    });
+    if (process.env.COVERAGE)
+      utils.recordAPICoverage(testRunner, require('../lib/api'), CHROMIUM_NO_COVERAGE);
   });
 }
 
@@ -173,5 +101,10 @@ if (process.env.CI && testRunner.hasFocusedTestsOrSuites()) {
   process.exit(1);
 }
 
-new Reporter(testRunner);
+new Reporter(testRunner, {
+  verbose: process.argv.includes('--verbose'),
+  summary: !process.argv.includes('--verbose'),
+  projectFolder: utils.projectRoot(),
+  showSlowTests: process.env.CI ? 5 : 0,
+});
 testRunner.run();
