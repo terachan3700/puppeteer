@@ -1,10 +1,8 @@
 ##### Released APIs: [v1.5.0](https://github.com/GoogleChrome/puppeteer/blob/v1.5.0/docs/api.md) | [v1.4.0](https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md) | [v1.3.0](https://github.com/GoogleChrome/puppeteer/blob/v1.3.0/docs/api.md) | [v1.2.0](https://github.com/GoogleChrome/puppeteer/blob/v1.2.0/docs/api.md) | [v1.1.1](https://github.com/GoogleChrome/puppeteer/blob/v1.1.1/docs/api.md) | [v1.1.0](https://github.com/GoogleChrome/puppeteer/blob/v1.1.0/docs/api.md) | [v1.0.0](https://github.com/GoogleChrome/puppeteer/blob/v1.0.0/docs/api.md) | [v0.13.0](https://github.com/GoogleChrome/puppeteer/blob/v0.13.0/docs/api.md) | [v0.12.0](https://github.com/GoogleChrome/puppeteer/blob/v0.12.0/docs/api.md) | [v0.11.0](https://github.com/GoogleChrome/puppeteer/blob/v0.11.0/docs/api.md) | [v0.10.2](https://github.com/GoogleChrome/puppeteer/blob/v0.10.2/docs/api.md) | [v0.10.1](https://github.com/GoogleChrome/puppeteer/blob/v0.10.1/docs/api.md) | [v0.10.0](https://github.com/GoogleChrome/puppeteer/blob/v0.10.0/docs/api.md) | [v0.9.0](https://github.com/GoogleChrome/puppeteer/blob/v0.9.0/docs/api.md)
 
-# Puppeteer API <!-- GEN:version -->Tip-Of-Tree<!-- GEN:stop-->
+# Puppeteer API <!-- GEN:version -->v1.6.0<!-- GEN:stop-->
 
-<!-- GEN:empty-if-release -->
-> Next Release: **July 12, 2018**
-<!-- GEN:stop -->
+<!-- GEN:empty-if-release --><!-- GEN:stop -->
 
 
 ##### Table of Contents
@@ -128,6 +126,8 @@
   * [page.waitFor(selectorOrFunctionOrTimeout[, options[, ...args]])](#pagewaitforselectororfunctionortimeout-options-args)
   * [page.waitForFunction(pageFunction[, options[, ...args]])](#pagewaitforfunctionpagefunction-options-args)
   * [page.waitForNavigation(options)](#pagewaitfornavigationoptions)
+  * [page.waitForRequest(urlOrPredicate, options)](#pagewaitforrequesturlorpredicate-options)
+  * [page.waitForResponse(urlOrPredicate, options)](#pagewaitforresponseurlorpredicate-options)
   * [page.waitForSelector(selector[, options])](#pagewaitforselectorselector-options)
   * [page.waitForXPath(xpath[, options])](#pagewaitforxpathxpath-options)
   * [page.workers()](#pageworkers)
@@ -220,6 +220,7 @@
   * [elementHandle.getProperties()](#elementhandlegetproperties)
   * [elementHandle.getProperty(propertyName)](#elementhandlegetpropertypropertyname)
   * [elementHandle.hover()](#elementhandlehover)
+  * [elementHandle.isIntersectingViewport()](#elementhandleisintersectingviewport)
   * [elementHandle.jsonValue()](#elementhandlejsonvalue)
   * [elementHandle.press(key[, options])](#elementhandlepresskey-options)
   * [elementHandle.screenshot([options])](#elementhandlescreenshotoptions)
@@ -777,7 +778,7 @@ The method runs `document.querySelectorAll` within the page. If no elements matc
 Shortcut for [page.mainFrame().$$(selector)](#frameselector-1).
 
 #### page.$$eval(selector, pageFunction[, ...args])
-- `selector` <[string]> A [selector] to query frame for
+- `selector` <[string]> A [selector] to query page for
 - `pageFunction` <[function]> Function to be evaluated in browser context
 - `...args` <...[Serializable]|[JSHandle]> Arguments to pass to `pageFunction`
 - returns: <[Promise]<[Serializable]>> Promise which resolves to the return value of `pageFunction`
@@ -1250,6 +1251,8 @@ Page is guaranteed to have a main frame which persists during navigations.
 
 `page.pdf()` generates a pdf of the page with `print` css media. To generate a pdf with `screen` media, call [page.emulateMedia('screen')](#pageemulatemediamediatype) before calling `page.pdf()`:
 
+> **NOTE** By default, `page.pdf()` generates a pdf with modified colors for printing. Use the [`-webkit-print-color-adjust`](https://developer.mozilla.org/en-US/docs/Web/CSS/-webkit-print-color-adjust) property to force rendering of exact colors.
+
 ```js
 // Generates a PDF with 'screen' media type.
 await page.emulateMedia('screen');
@@ -1568,6 +1571,30 @@ await navigationPromise; // The navigationPromise resolves after navigation has 
 ```
 
 **NOTE** Usage of the [History API](https://developer.mozilla.org/en-US/docs/Web/API/History_API) to change the URL is considered a navigation.
+
+#### page.waitForRequest(urlOrPredicate, options)
+- `urlOrPredicate` <[string]|[Function]> A URL or predicate to wait for.
+- `options` <[Object]> Optional waiting parameters
+  - `timeout` <[number]> Maximum wait time in milliseconds, defaults to 30 seconds, pass `0` to disable the timeout.
+- returns: <[Promise]<[Request]>> Promise which resolves to the matched request.
+
+```js
+const firstRequest = await page.waitForRequest('http://example.com/resource');
+const finalRequest = await page.waitForRequest(request => request.url() === 'http://example.com' && request.method() === 'GET');
+return firstRequest.url();
+```
+
+#### page.waitForResponse(urlOrPredicate, options)
+- `urlOrPredicate` <[string]|[Function]> A URL or predicate to wait for.
+- `options` <[Object]> Optional waiting parameters
+  - `timeout` <[number]> Maximum wait time in milliseconds, defaults to 30 seconds, pass `0` to disable the timeout.
+- returns: <[Promise]<[Response]>> Promise which resolves to the matched response.
+
+```js
+const firstResponse = await page.waitForResponse('https://example.com/resource');
+const finalResponse = await page.waitForResponse(response => response.url() === 'https://example.com' && response.status() === 200);
+return finalResponse.ok();
+```
 
 #### page.waitForSelector(selector[, options])
 - `selector` <[string]> A [selector] of an element to wait for
@@ -1916,13 +1943,13 @@ puppeteer.launch().then(async browser => {
 ```
 
 #### frame.$(selector)
-- `selector` <[string]> Selector to query page for
+- `selector` <[string]> A [selector] to query frame for
 - returns: <[Promise]<?[ElementHandle]>> Promise which resolves to ElementHandle pointing to the frame element.
 
 The method queries frame for the selector. If there's no such element within the frame, the method will resolve to `null`.
 
 #### frame.$$(selector)
-- `selector` <[string]> Selector to query page for
+- `selector` <[string]> A [selector] to query frame for
 - returns: <[Promise]<[Array]<[ElementHandle]>>> Promise which resolves to ElementHandles pointing to the frame elements.
 
 The method runs `document.querySelectorAll` within the frame. If no elements match the selector, the return value resolve to `[]`.
@@ -2546,6 +2573,9 @@ Fetches a single property from the objectHandle.
 This method scrolls element into view if needed, and then uses [page.mouse](#pagemouse) to hover over the center of the element.
 If the element is detached from DOM, the method throws an error.
 
+#### elementHandle.isIntersectingViewport()
+- returns: <[Promise]<[boolean]>> Resolves to true if the element is visible in the current viewport.
+
 #### elementHandle.jsonValue()
 - returns: <[Promise]<[Object]>>
 
@@ -2933,7 +2963,10 @@ _To output coverage in a form consumable by [Istanbul](https://github.com/istanb
 #### coverage.startJSCoverage(options)
 - `options` <[Object]>  Set of configurable options for coverage
   - `resetOnNavigation` <[boolean]> Whether to reset coverage on every navigation. Defaults to `true`.
+  - `reportAnonymousScripts` <[boolean]> Whether anonymous scripts generated by the page should be reported. Defaults to `false`.
 - returns: <[Promise]> Promise that resolves when coverage is started
+
+> **NOTE** Anonymous scripts are ones that don't have an associated url. These are scripts that are dynamically created on the page using `eval` or `new Function`. If `reportAnonymousScripts` is set to `true`, anonymous scripts will have `__puppeteer_evaluation_script__` as their URL.
 
 #### coverage.stopCSSCoverage()
 - returns: <[Promise]<[Array]<[Object]>>> Promise that resolves to the array of coverage reports for all stylesheets
@@ -2946,14 +2979,14 @@ _To output coverage in a form consumable by [Istanbul](https://github.com/istanb
 > **NOTE** CSS Coverage doesn't include dynamically injected style tags without sourceURLs.
 
 #### coverage.stopJSCoverage()
-- returns: <[Promise]<[Array]<[Object]>>> Promise that resolves to the array of coverage reports for all non-anonymous scripts
+- returns: <[Promise]<[Array]<[Object]>>> Promise that resolves to the array of coverage reports for all scripts
   - `url` <[string]> Script URL
   - `text` <[string]> Script content
   - `ranges` <[Array]<[Object]>> Script ranges that were executed. Ranges are sorted and non-overlapping.
     - `start` <[number]> A start offset in text, inclusive
     - `end` <[number]> An end offset in text, exclusive
 
-> **NOTE** JavaScript Coverage doesn't include anonymous scripts. However, scripts with sourceURLs are
+> **NOTE** JavaScript Coverage doesn't include anonymous scripts by default. However, scripts with sourceURLs are
 reported.
 
 [Array]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array "Array"
