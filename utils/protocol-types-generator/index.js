@@ -7,6 +7,7 @@ module.exports = puppeteer.launch({
 }).then(async browser => {
   const origin = browser.wsEndpoint().match(/ws:\/\/([0-9A-Za-z:\.]*)\//)[1];
   const page = await browser.newPage();
+  await page.setRequestInterception(false);
   await page.goto(`http://${origin}/json/protocol`);
   const json = JSON.parse(await page.evaluate(() => document.documentElement.innerText));
   const version = await browser.version();
