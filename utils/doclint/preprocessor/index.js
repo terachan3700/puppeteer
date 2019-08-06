@@ -16,10 +16,24 @@
 
 const Message = require('../Message');
 
-module.exports = function(sources, version) {
+module.exports.ensureReleasedAPILinks = function(sources, version) {
+  // Release version is everything that doesn't include "-".
+  const apiLinkRegex = /https:\/\/github.com\/GoogleChrome\/puppeteer\/blob\/v[^/]*\/docs\/api.md/ig;
+  const lastReleasedAPI = `https://github.com/GoogleChrome/puppeteer/blob/v${version.split('-')[0]}/docs/api.md`;
+
+  const messages = [];
+  for (const source of sources) {
+    const text = source.text();
+    const newText = text.replace(apiLinkRegex, lastReleasedAPI);
+    if (source.setText(newText))
+      messages.push(Message.warning(`GEN: updated ${source.projectPath()}`));
+  }
+  return messages;
+};
+
+module.exports.runCommands = function(sources, version) {
   // Release version is everything that doesn't include "-".
   const isReleaseVersion = !version.includes('-');
-  const lastReleasedAPILink = `[API](https://github.com/GoogleChrome/puppeteer/blob/v${version.split('-')[0]}/docs/api.md)`;
 
   const messages = [];
   const commands = [];
@@ -54,8 +68,6 @@ module.exports = function(sources, version) {
       newText = isReleaseVersion ? 'v' + version : 'Tip-Of-Tree';
     else if (command.name === 'empty-if-release')
       newText = isReleaseVersion ? '' : command.originalText;
-    else if (command.name === 'last-released-api')
-      newText = lastReleasedAPILink;
     else if (command.name === 'toc')
       newText = generateTableOfContents(command.source.text().substring(command.to));
     if (newText === null)
@@ -81,11 +93,22 @@ function applyCommand(command, editText) {
 
 function generateTableOfContents(mdText) {
   const ids = new Set();
-  const titles = mdText.split('\n').map(line => line.trim()).filter(line => line.startsWith('#'));
+  const titles = [];
+  let insideCodeBlock = false;
+  for (const aLine of mdText.split('\n')) {
+    const line = aLine.trim();
+    if (line.startsWith('```')) {
+      insideCodeBlock = !insideCodeBlock;
+      continue;
+    }
+    if (!insideCodeBlock && line.startsWith('#'))
+      titles.push(line);
+  }
   const tocEntries = [];
   for (const title of titles) {
     const [, nesting, name] = title.match(/^(#+)\s+(.*)$/);
-    const id = name.trim().toLowerCase().replace(/\s/g, '-').replace(/[^-0-9a-zа-яё]/ig, '');
+    const delinkifiedName = name.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    const id = delinkifiedName.trim().toLowerCase().replace(/\s/g, '-').replace(/[^-0-9a-zа-яё]/ig, '');
     let dedupId = id;
     let counter = 0;
     while (ids.has(dedupId))
@@ -93,7 +116,7 @@ function generateTableOfContents(mdText) {
     ids.add(dedupId);
     tocEntries.push({
       level: nesting.length,
-      name,
+      name: delinkifiedName,
       id: dedupId
     });
   }

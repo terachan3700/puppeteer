@@ -10,23 +10,6 @@ NODE_PATH=../ node examples/search.js
 
 More complex and use case driven examples can be found at [github.com/GoogleChromeLabs/puppeteer-examples](https://github.com/GoogleChromeLabs/puppeteer-examples).
 
-# Tips & Tricks
-
-## Load a Chrome extension
-
-By default, Puppeteer disables extensions when launching Chrome. You can load a specific
-extension using:
-
-```js
-const browser = await puppeteer.launch({
-  headless: false,
-  args: [
-    '--disable-extensions-except=/path/to/extension/',
-    '--load-extension=/path/to/extension/',
-  ]
-});
-```
-
 # Other resources
 
 > Other useful tools, articles, and projects that use Puppeteer.
@@ -48,6 +31,7 @@ const browser = await puppeteer.launch({
 - [puppeteer-to-istanbul-example](https://github.com/bcoe/puppeteer-to-istanbul-example) - Demo repository demonstrating how to output Puppeteer coverage in Istanbul format.
 - [jest-puppeteer](https://github.com/smooth-code/jest-puppeteer) - (almost) Zero configuration tool for setting up and running Jest and Puppeteer easily. Also includes an assertion library for Puppeteer.
 - [puppeteer-har](https://github.com/Everettss/puppeteer-har) - Generate HAR file with puppeteer.
+- [puppetry](https://puppetry.app/) - A desktop app to build Puppeteer/Jest driven tests without coding.
 
 ## Services
 - [Checkly](https://checklyhq.com) - Monitoring SaaS that uses Puppeteer to check availability and correctness of web pages and apps.

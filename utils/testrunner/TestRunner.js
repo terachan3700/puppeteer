@@ -97,26 +97,30 @@ const TestResult = {
 };
 
 class Test {
-  constructor(suite, name, callback, declaredMode, timeout) {
+  constructor(suite, name, callback, declaredMode, timeout, comment) {
     this.suite = suite;
     this.name = name;
     this.fullName = (suite.fullName + ' ' + name).trim();
     this.declaredMode = declaredMode;
     this._userCallback = new UserCallback(callback, timeout);
     this.location = this._userCallback.location;
+    this.comment = comment;
 
     // Test results
     this.result = null;
     this.error = null;
+    this.startTimestamp = 0;
+    this.endTimestamp = 0;
   }
 }
 
 class Suite {
-  constructor(parentSuite, name, declaredMode) {
+  constructor(parentSuite, name, declaredMode, comment) {
     this.parentSuite = parentSuite;
     this.name = name;
     this.fullName = (parentSuite ? parentSuite.fullName + ' ' + name : name).trim();
     this.declaredMode = declaredMode;
+    this.comment = comment;
     /** @type {!Array<(!Test|!Suite)>} */
     this.children = [];
 
@@ -208,10 +212,10 @@ class TestPass {
   async _runTest(workerId, test, state) {
     if (this._termination)
       return;
-    this._runner._willStartTest(test);
+    this._runner._willStartTest(test, workerId);
     if (test.declaredMode === TestMode.Skip) {
       test.result = TestResult.Skipped;
-      this._runner._didFinishTest(test);
+      this._runner._didFinishTest(test, workerId);
       return;
     }
     this._runningUserCallbacks.set(workerId, test._userCallback);
@@ -226,7 +230,7 @@ class TestPass {
       test.result = TestResult.TimedOut;
     else
       test.result = TestResult.Failed;
-    this._runner._didFinishTest(test);
+    this._runner._didFinishTest(test, workerId);
   }
 
   async _runHook(workerId, suite, hookName, ...args) {
@@ -267,7 +271,6 @@ class TestRunner extends EventEmitter {
     // Default timeout is 10 seconds.
     this._timeout = options.timeout === 0 ? 2147483647 : options.timeout || 10 * 1000;
     this._parallel = options.parallel || 1;
-    this._retryFailures = !!options.retryFailures;
 
     this._hasFocusedTestsOrSuites = false;
 
@@ -282,32 +285,40 @@ class TestRunner extends EventEmitter {
     }
 
     // bind methods so that they can be used as a DSL.
-    this.describe = this._addSuite.bind(this, TestMode.Run);
-    this.fdescribe = this._addSuite.bind(this, TestMode.Focus);
-    this.xdescribe = this._addSuite.bind(this, TestMode.Skip);
-    this.it = this._addTest.bind(this, TestMode.Run);
-    this.fit = this._addTest.bind(this, TestMode.Focus);
-    this.xit = this._addTest.bind(this, TestMode.Skip);
+    this.describe = this._addSuite.bind(this, TestMode.Run, '');
+    this.fdescribe = this._addSuite.bind(this, TestMode.Focus, '');
+    this.xdescribe = this._addSuite.bind(this, TestMode.Skip, '');
+    this.it = this._addTest.bind(this, TestMode.Run, '');
+    this.fit = this._addTest.bind(this, TestMode.Focus, '');
+    this.xit = this._addTest.bind(this, TestMode.Skip, '');
     this.beforeAll = this._addHook.bind(this, 'beforeAll');
     this.beforeEach = this._addHook.bind(this, 'beforeEach');
     this.afterAll = this._addHook.bind(this, 'afterAll');
     this.afterEach = this._addHook.bind(this, 'afterEach');
   }
 
-  _addTest(mode, name, callback) {
+  addTestDSL(dslName, mode, comment) {
+    this[dslName] = this._addTest.bind(this, mode, comment);
+  }
+
+  addSuiteDSL(dslName, mode, comment) {
+    this[dslName] = this._addSuite.bind(this, mode, comment);
+  }
+
+  _addTest(mode, comment, name, callback) {
     let suite = this._currentSuite;
     let isSkipped = suite.declaredMode === TestMode.Skip;
     while ((suite = suite.parentSuite))
       isSkipped |= suite.declaredMode === TestMode.Skip;
-    const test = new Test(this._currentSuite, name, callback, isSkipped ? TestMode.Skip : mode, this._timeout);
+    const test = new Test(this._currentSuite, name, callback, isSkipped ? TestMode.Skip : mode, this._timeout, comment);
     this._currentSuite.children.push(test);
     this._tests.push(test);
     this._hasFocusedTestsOrSuites = this._hasFocusedTestsOrSuites || mode === TestMode.Focus;
   }
 
-  _addSuite(mode, name, callback) {
+  _addSuite(mode, comment, name, callback) {
     const oldSuite = this._currentSuite;
-    const suite = new Suite(this._currentSuite, name, mode);
+    const suite = new Suite(this._currentSuite, name, mode, comment);
     this._currentSuite.children.push(suite);
     this._currentSuite = suite;
     callback();
@@ -322,8 +333,9 @@ class TestRunner extends EventEmitter {
   }
 
   async run() {
-    this.emit(TestRunner.Events.Started);
-    const pass = new TestPass(this, this._rootSuite, this._runnableTests(), this._parallel);
+    const runnableTests = this._runnableTests();
+    this.emit(TestRunner.Events.Started, runnableTests);
+    const pass = new TestPass(this, this._rootSuite, runnableTests, this._parallel);
     const termination = await pass.run();
     if (termination)
       this.emit(TestRunner.Events.Terminated, termination.message, termination.error);
@@ -376,16 +388,26 @@ class TestRunner extends EventEmitter {
     return this._tests.filter(test => test.result === 'failed' || test.result === 'timedout');
   }
 
+  passedTests() {
+    return this._tests.filter(test => test.result === 'ok');
+  }
+
+  skippedTests() {
+    return this._tests.filter(test => test.result === 'skipped');
+  }
+
   parallel() {
     return this._parallel;
   }
 
-  _willStartTest(test) {
-    this.emit('teststarted', test);
+  _willStartTest(test, workerId) {
+    test.startTimestamp = Date.now();
+    this.emit(TestRunner.Events.TestStarted, test, workerId);
   }
 
-  _didFinishTest(test) {
-    this.emit('testfinished', test);
+  _didFinishTest(test, workerId) {
+    test.endTimestamp = Date.now();
+    this.emit(TestRunner.Events.TestFinished, test, workerId);
   }
 }
 
